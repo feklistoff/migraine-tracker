@@ -1,0 +1,11 @@
+{
+  "id": "./?spike=1",
+  "name": "iPhone platform check",
+  "short_name": "Platform check",
+  "start_url": "./?spike=1",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F5EFE7",
+  "theme_color": "#F5EFE7",
+  "description": "Temporary synthetic checks for the iPhone web platform."
+}
