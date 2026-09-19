@@ -25,8 +25,8 @@ The first scaffold contains no diary seed data. Backup and restore will use read
 
 ## GitHub Pages platform spike
 
-The temporary synthetic platform check is available at `/?spike=1`. For the configured project site, use [`https://feklistoff.github.io/migraine-tracker/?spike=1`](https://feklistoff.github.io/migraine-tracker/?spike=1). Follow [`docs/testing/iphone-spike.md`](docs/testing/iphone-spike.md) on the target iPhone before recording real diary data.
+The temporary synthetic platform check is available at `/?spike=1`. For the configured project site, use [`https://feklistoff.github.io/migraine-tracker/?spike=1`](https://feklistoff.github.io/migraine-tracker/?spike=1). Follow the local platform-spike checklist on the target iPhone before recording real diary data. Planning documents are intentionally excluded from this repository.
 
 ## Current implementation stage
 
-Task 01 establishes the reproducible app shell and checks. The domain model, IndexedDB persistence, diary flows, backup/restore, offline installation, and GitHub Pages deployment are implemented in later plan tasks. Product-visible time, overlap, follow-up, and post-end rules are recorded in `docs/decisions/implementation-contract.md` and must be resolved before dependent domain work.
+Task 01 establishes the reproducible app shell and checks. The domain model, IndexedDB persistence, diary flows, backup/restore, offline installation, and GitHub Pages deployment are implemented in later plan tasks. Product-visible time, overlap, follow-up, and post-end rules remain in the local planning workspace and must be resolved before dependent domain work.
