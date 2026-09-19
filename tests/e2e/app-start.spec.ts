@@ -19,3 +19,18 @@ test('spike route advertises a spike-specific install manifest', async ({ page }
   expect(manifestResponse.ok()).toBeTruthy()
   await expect(manifestResponse.json()).resolves.toMatchObject({ start_url: './?spike=1' })
 })
+
+test('document has a restrictive CSP and no inline scripts', async ({ page }) => {
+  await page.goto('/')
+
+  const csp = await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute('content')
+  expect(csp).toContain("default-src 'self'")
+  expect(csp).toContain("script-src 'self'")
+  expect(csp).toContain("connect-src 'self'")
+  expect(csp).toContain("object-src 'none'")
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow')
+  await expect(page.locator('script[src$="manifest-selector.js"]')).toHaveCount(1)
+
+  const inlineScriptBodies = await page.locator('script:not([src])').allTextContents()
+  expect(inlineScriptBodies.every((body) => body.includes('injectIntoGlobalHook'))).toBeTruthy()
+})

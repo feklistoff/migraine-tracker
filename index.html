@@ -6,13 +6,14 @@
     <meta name="theme-color" content="#F5EFE7" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Headache diary" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; frame-src 'none'; form-action 'self'"
+    />
     <meta name="description" content="A private, phone-local headache diary." />
     <link id="app-manifest" rel="manifest" href="%BASE_URL%manifest.webmanifest" />
-    <script>
-      if (new URLSearchParams(window.location.search).get('spike') === '1') {
-        document.getElementById('app-manifest')?.setAttribute('href', '%BASE_URL%spike-manifest.webmanifest')
-      }
-    </script>
+    <script vite-ignore src="%BASE_URL%manifest-selector.js"></script>
     <title>Headache diary</title>
   </head>
   <body>

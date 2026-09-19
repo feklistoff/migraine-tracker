@@ -21,12 +21,8 @@ pnpm run build
 pnpm run test:e2e
 ```
 
-The first scaffold contains no diary seed data. Backup and restore will use readable JSON health data; the finished app will explain that users must choose and verify their own storage destination.
+`pnpm run build` also checks `dist/index.html` for the restrictive CSP, its placement before scripts, absence of inline scripts, and privacy metadata. The browser e2e tests use the development server.
 
-## GitHub Pages platform spike
+CI runs source checks, a production dependency audit, and the build on pull requests to `main` and pushes to `main`. Only pushes to `main` deploy; manual workflow runs validate without deploying. Dependabot version updates wait seven days after release.
 
-The temporary synthetic platform check is available at `/?spike=1`. For the configured project site, use [`https://feklistoff.github.io/migraine-tracker/?spike=1`](https://feklistoff.github.io/migraine-tracker/?spike=1). Follow the local platform-spike checklist on the target iPhone before recording real diary data. Planning documents are intentionally excluded from this repository.
-
-## Current implementation stage
-
-Task 01 establishes the reproducible app shell and checks. The domain model, IndexedDB persistence, diary flows, backup/restore, offline installation, and GitHub Pages deployment are implemented in later plan tasks. Product-visible time, overlap, follow-up, and post-end rules remain in the local planning workspace and must be resolved before dependent domain work.
+The required **Audit production dependencies** step fails if npm's audit service is unavailable as well as when it finds high/critical vulnerabilities. For a service error such as HTTP 503, rerun the workflow after the service recovers; do not bypass the audit.
