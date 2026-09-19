@@ -1,0 +1,11 @@
+{
+  "id": "./",
+  "name": "Headache diary",
+  "short_name": "Headache diary",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F5EFE7",
+  "theme_color": "#F5EFE7",
+  "description": "A private, phone-local headache diary."
+}
