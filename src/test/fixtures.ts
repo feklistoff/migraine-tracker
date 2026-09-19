@@ -26,7 +26,7 @@ const audit = {
 function metadata(): DiaryMetadata {
   return {
     ...audit,
-    schemaVersion: 1,
+    schemaVersion: 2,
     revision: 0,
     timeZonePolicy: 'event-local',
     lastExportGeneratedAt: null,

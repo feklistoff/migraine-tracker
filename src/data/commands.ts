@@ -5,7 +5,14 @@ import {
   startEpisode as domainStartEpisode,
   type StartEpisodeInput,
 } from '../domain/episodes'
-import { compareInstants, elapsedMilliseconds, instantFromEventTime } from '../domain/time'
+import {
+  civilDay,
+  civilDaysForInterval,
+  compareInstants,
+  elapsedMilliseconds,
+  eventTimeFromInstant,
+  instantFromEventTime,
+} from '../domain/time'
 import {
   validateDoseBounds,
   validateEpisode,
@@ -35,6 +42,8 @@ import { readFactsFromTables } from './repository'
 
 export interface CommandOptions {
   expectedRevision?: number
+  /** Explicitly move the onset-anchored reading when a start time is edited. */
+  moveOnsetReading?: boolean
 }
 
 export type EpisodeChanges = Partial<Pick<Episode, 'start' | 'state' | 'end' | 'note'>>
@@ -209,9 +218,19 @@ export async function editEpisode(
       existingEpisodes: facts.episodes.filter((item) => item.id !== episodeId),
     })
     if (!result.valid) throw validationFailure(result.issues)
-    await validateEpisodeChildren(result.value, facts, repository)
+
+    const movedOnsetReadings = options.moveOnsetReading
+      ? facts.readings
+          .filter((reading) => reading.episodeId === episodeId && reading.atOnset)
+          .map((reading) => ({ ...reading, measuredAt: result.value.start, updatedAt: now(repository) }))
+      : []
+    const factsForValidation = movedOnsetReadings.length
+      ? { ...facts, readings: facts.readings.map((reading) => movedOnsetReadings.find((moved) => moved.id === reading.id) ?? reading) }
+      : facts
+    await validateEpisodeChildren(result.value, factsForValidation, repository)
 
     await tables.episodes.put(result.value)
+    if (movedOnsetReadings.length > 0) await tables.readings.bulkPut(movedOnsetReadings)
     await clearConflictingConfirmations(tables, [result.value], repository)
     return { value: result.value }
   })
@@ -291,6 +310,19 @@ export async function saveReading(
   })
 }
 
+export async function deleteReading(
+  repository: DiaryRepository,
+  readingId: string,
+  options: CommandOptions = {},
+): Promise<void> {
+  await runAtomicWrite(repository, 'delete-reading', options, async ({ facts, tables }) => {
+    const reading = facts.readings.find((candidate) => candidate.id === readingId)
+    if (!reading) throw new MissingRecordError('reading', readingId)
+    await tables.readings.delete(reading.id)
+    return { value: undefined }
+  })
+}
+
 export async function saveDose(
   repository: DiaryRepository,
   input: DoseInput | Dose,
@@ -330,7 +362,7 @@ export async function saveDailyRecord(
 
     const existing = facts.dailyRecords.find((record) => record.day === input.day)
     const record = auditRecord({ ...input } as DailyRecord, repository, existing)
-    if (record.headacheFreeAt && evidenceDays(facts).has(record.day)) record.headacheFreeAt = null
+    if (record.headacheFreeAt && evidenceDays(facts, repository).has(record.day)) record.headacheFreeAt = null
 
     const isBlank =
       record.headacheFreeAt === null &&
@@ -361,6 +393,20 @@ export async function saveMedicine(
       ])
     }
     await tables.medicines.put(record)
+
+    // An archived medicine must never remain selected as the convenience
+    // default. Keep that cleanup in the same transaction as the archive so a
+    // settings read can never observe a dangling default.
+    if (record.archived && facts.settings.defaultMedicineId === record.id) {
+      await tables.settings.put({
+        key: SINGLETON_KEY,
+        value: {
+          ...facts.settings,
+          defaultMedicineId: null,
+          updatedAt: now(repository),
+        },
+      })
+    }
     return { value: record }
   })
 }
@@ -376,12 +422,35 @@ export async function saveSettings(
       ...changes,
       updatedAt: now(repository),
     }
-    if (candidate.defaultMedicineId && !facts.medicines.some((medicine) => medicine.id === candidate.defaultMedicineId)) {
+    if (candidate.painEntryDefault !== 'numeric' && candidate.painEntryDefault !== 'verbal') {
+      throw validationFailure([
+        {
+          code: 'invalid-pain-entry-default',
+          path: 'painEntryDefault',
+          message: 'Pain entry default must be 0 to 10 or Words.',
+        },
+      ])
+    }
+    if (typeof candidate.followUpEnabled !== 'boolean') {
+      throw validationFailure([
+        {
+          code: 'invalid-follow-up-enabled',
+          path: 'followUpEnabled',
+          message: 'Follow-up checks must be enabled or disabled.',
+        },
+      ])
+    }
+    if (
+      candidate.defaultMedicineId &&
+      !facts.medicines.some(
+        (medicine) => medicine.id === candidate.defaultMedicineId && !medicine.archived,
+      )
+    ) {
       throw validationFailure([
         {
           code: 'missing-medicine',
           path: 'defaultMedicineId',
-          message: 'The default medicine no longer exists.',
+          message: 'The default medicine must be an active saved medicine.',
         },
       ])
     }
@@ -427,11 +496,10 @@ function isPositivePain(pain: Reading['pain']): boolean {
   return pain !== null && (pain.kind === 'numeric' ? pain.value > 0 : pain.value !== 'none')
 }
 
-function evidenceDays(facts: DiaryFacts): Set<string> {
+function evidenceDays(facts: DiaryFacts, repository: DiaryRepository): Set<string> {
   const days = new Set<string>()
   for (const episode of facts.episodes) {
-    days.add(civilDay(episode.start))
-    if (episode.end) days.add(civilDay(episode.end))
+    for (const day of episodeEvidenceDays(episode, repository)) days.add(day)
   }
   for (const reading of facts.readings) {
     if (isPositivePain(reading.pain)) days.add(civilDay(reading.measuredAt))
@@ -448,8 +516,7 @@ async function clearConflictingConfirmations(
   const days = new Set<string>()
   for (const record of records) {
     if ('start' in record) {
-      days.add(civilDay(record.start))
-      if (record.end) days.add(civilDay(record.end))
+      for (const day of episodeEvidenceDays(record, repository)) days.add(day)
     } else if ('measuredAt' in record) {
       if (isPositivePain(record.pain)) days.add(civilDay(record.measuredAt))
     } else {
@@ -470,11 +537,13 @@ async function clearConflictingConfirmations(
       else await tables.dailyRecords.put(cleared)
     }
   }
-
 }
 
-function civilDay(value: RecordedTime): string {
-  return Temporal.Instant.from(instantFromEventTime(value)).toZonedDateTimeISO(value.timeZone).toPlainDate().toString()
+function episodeEvidenceDays(episode: Episode, repository: DiaryRepository): string[] {
+  if (episode.state === 'end_unknown') return [civilDay(episode.start)]
+
+  const end = episode.end ?? eventTimeFromInstant(repository.clock.now(), repository.clock.timeZone())
+  return civilDaysForInterval(episode.start, end, { endExclusive: episode.end !== null })
 }
 
 function validateDailyRecordInput(input: DailyRecordInput | DailyRecord, repository: DiaryRepository): ValidationIssue[] {

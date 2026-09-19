@@ -75,11 +75,12 @@ export function ActivitySelector({ value, onChange }: ActivitySelectorProps) {
       {impactOptions.map((option) => {
         const selected = value === option.value
         return (
-          <button
-            key={option.value}
-            className={`activity-option${selected ? ' activity-option--selected' : ''}`}
-            type="button"
-            aria-pressed={selected}
+            <button
+              key={option.value}
+              className={`activity-option${selected ? ' activity-option--selected' : ''}`}
+              type="button"
+              aria-label={option.label}
+              aria-pressed={selected}
             onClick={() => onChange(selected ? null : option.value)}
           >
             <span className="activity-option__radio" aria-hidden="true">

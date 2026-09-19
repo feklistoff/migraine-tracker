@@ -13,6 +13,8 @@ export type ValidationIssueCode =
   | 'dose-after-end'
   | 'overlap'
   | 'multiple-ongoing'
+  | 'invalid-pain-entry-default'
+  | 'invalid-follow-up-enabled'
   | 'invalid-follow-up-interval'
   | 'invalid-day'
   | 'missing-medicine'

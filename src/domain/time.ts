@@ -74,6 +74,39 @@ export function civilDay(value: RecordedTime): string {
   return zonedDateTimeFromEventTime(value).toPlainDate().toString()
 }
 
+/**
+ * Return the civil days touched by an interval in each endpoint's recorded
+ * timezone. Known episode ends are exclusive; a zero-length interval still
+ * contributes its start day.
+ */
+export function civilDaysForInterval(
+  start: RecordedTime,
+  end: RecordedTime,
+  options: { endExclusive?: boolean } = {},
+): string[] {
+  const comparison = compareInstants(start, end)
+  if (comparison > 0) {
+    throw new RangeError(`An interval cannot end before it starts: ${start.instant} > ${end.instant}.`)
+  }
+  if (comparison === 0) return [civilDay(start)]
+
+  const endInstant = instantFromEventTime(end)
+  const lastInstant = options.endExclusive && comparison < 0 ? endInstant.subtract({ nanoseconds: 1 }) : endInstant
+  const days = new Set<string>()
+
+  for (const timeZone of new Set([start.timeZone, end.timeZone])) {
+    const firstDate = instantFromEventTime(start).toZonedDateTimeISO(timeZone).toPlainDate()
+    const lastDate = lastInstant.toZonedDateTimeISO(timeZone).toPlainDate()
+    let date = firstDate
+    while (Temporal.PlainDate.compare(date, lastDate) <= 0) {
+      days.add(date.toString())
+      date = date.add({ days: 1 })
+    }
+  }
+
+  return [...days].sort()
+}
+
 export function compareInstants(one: RecordedTime | InstantLike, two: RecordedTime | InstantLike): -1 | 0 | 1 {
   const oneInstant = typeof one === 'object' && 'instant' in one ? instantFromEventTime(one) : asInstant(one)
   const twoInstant = typeof two === 'object' && 'instant' in two ? instantFromEventTime(two) : asInstant(two)
@@ -185,4 +218,16 @@ export function fixedClock(now: InstantLike, timeZone: string): Clock {
 
 export function nowEventTime(clock: Clock = systemClock()): RecordedTime {
   return eventTimeFromInstant(clock.now(), clock.timeZone())
+}
+
+/**
+ * Format an event in its recorded civil context for a native datetime-local
+ * control. The control has minute precision; the canonical instant remains
+ * unchanged until the user explicitly saves the form.
+ */
+export function dateTimeInputValue(value: RecordedTime): string {
+  const zoned = zonedDateTimeFromEventTime(value)
+  const hour = String(zoned.hour).padStart(2, '0')
+  const minute = String(zoned.minute).padStart(2, '0')
+  return `${zoned.toPlainDate().toString()}T${hour}:${minute}`
 }

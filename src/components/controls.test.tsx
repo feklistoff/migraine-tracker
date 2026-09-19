@@ -1,15 +1,18 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 
 import { ActivitySelector, PainSelector } from './controls'
-
-afterEach(cleanup)
 
 describe('semantic diary selectors', () => {
   it('exposes numeric pain choices with selected state beyond colour', () => {
     const onChange = vi.fn()
 
     render(<PainSelector mode="numeric" value={null} onChange={onChange} />)
+
+    const painZero = screen.getByRole('button', { name: 'Pain 0 of 10' })
+    expect(painZero).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(painZero)
+    expect(onChange).toHaveBeenCalledWith({ kind: 'numeric', value: 0 })
 
     const painSix = screen.getByRole('button', { name: 'Pain 6 of 10' })
     expect(painSix).toHaveAttribute('aria-pressed', 'false')

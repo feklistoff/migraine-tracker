@@ -1,27 +1,37 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
+import { deleteDiaryDatabase } from '../data/db'
+import { DiaryRepository } from '../data/repository'
+import { fixedClock } from '../domain/time'
 import { App } from './App'
 import { parseRoute, routeHref } from './Router'
 
-afterEach(() => {
-  cleanup()
+const databaseName = 'headache-diary-router-tests'
+let repository: DiaryRepository
+
+beforeEach(() => {
+  repository = new DiaryRepository({ databaseName, clock: fixedClock('2024-09-18T14:05:00Z', 'Europe/Helsinki') })
+})
+
+afterEach(async () => {
+  await repository.close()
+  await deleteDiaryDatabase(databaseName)
   window.history.replaceState({}, '', '/')
   window.location.hash = ''
 })
 
 describe('app navigation', () => {
   it('preserves a selected History day when a pushed page is opened', () => {
-    const route = parseRoute('#history?day=2024-09-18')
+    const route = { kind: 'page' as const, page: 'timeline' as const, tab: 'history' as const, selectedDay: '2024-09-18' }
 
-    expect(route).toEqual({ kind: 'tab', tab: 'history', selectedDay: '2024-09-18' })
-    expect(routeHref({ kind: 'page', page: 'timeline', tab: 'history', selectedDay: '2024-09-18' })).toBe(
-      '#timeline?day=2024-09-18',
-    )
+    expect(routeHref(route)).toBe('#timeline?tab=history&day=2024-09-18')
+    expect(parseRoute(routeHref(route))).toEqual(route)
   })
 
   it('switches between tabs without losing the shared shell', async () => {
-    render(<App />)
+    render(<App repository={repository} />)
+    await waitFor(() => expect(screen.getByRole('link', { name: 'History' })).toBeInTheDocument())
 
     fireEvent.click(screen.getByRole('link', { name: 'History' }))
 
@@ -36,7 +46,8 @@ describe('app navigation', () => {
   })
 
   it('keeps pushed pages in the tab shell and hides tabs for entry forms', async () => {
-    render(<App />)
+    render(<App repository={repository} />)
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Settings' })).toBeInTheDocument())
 
     fireEvent.click(screen.getByRole('link', { name: 'Settings' }))
 

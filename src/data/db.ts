@@ -56,6 +56,14 @@ export async function openDiaryDatabase(options: DiaryDatabaseOptions = {}): Pro
 
   try {
     await database.open()
+    // Dexie stores its decimal version API as a native IndexedDB integer ten
+    // times larger than the declared version.
+    const nativeVersion = database.backendDB().version / 10
+    if (nativeVersion > DIARY_SCHEMA_VERSION) {
+      throw new Error(
+        `This diary was created by a newer app version (schema ${nativeVersion}). Update the app before opening it.`,
+      )
+    }
     await database.transaction(
       'rw',
       [database.metadata, database.settings],

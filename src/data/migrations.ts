@@ -3,7 +3,7 @@ import type { Transaction } from 'dexie'
 import type { Clock } from '../domain/time'
 import type { DiaryMetadata, Settings } from '../domain/types'
 
-export const DIARY_SCHEMA_VERSION = 1
+export const DIARY_SCHEMA_VERSION = 2
 export const SINGLETON_KEY = 'singleton'
 
 export interface SingletonRow<T> {
@@ -21,7 +21,7 @@ export const DIARY_STORE_SCHEMAS = {
   readings: 'id,episodeId,measuredAt.instant,linkedDoseId',
   doses: 'id,episodeId,takenAt.instant,savedMedicineId',
   medicines: 'id,archived,name',
-  dailyRecords: 'day,headacheFreeAt.instant,alcohol,sleep,stress',
+  dailyRecords: 'day,headacheFreeAt.instant,sleep',
 } as const
 
 export interface MigrationContext {

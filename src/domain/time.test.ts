@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   civilDay,
+  civilDaysForInterval,
   elapsedMilliseconds,
   eventTimeFromInstant,
   fixedClock,
@@ -29,6 +30,21 @@ describe('domain time', () => {
 
     expect(civilDay(leapDay)).toBe('2024-02-29')
     expect(civilDay(newYear)).toBe('2025-01-01')
+  })
+
+  it('[R-02.5] treats a known midnight end as exclusive while keeping zero-length episodes on their start day', () => {
+    const start = resolveCivilDateTime({ date: '2024-09-16', time: '12:00', timeZone: 'Europe/Helsinki' })
+    const midnight = resolveCivilDateTime({ date: '2024-09-18', time: '00:00', timeZone: 'Europe/Helsinki' })
+
+    expect(start.ok && midnight.ok).toBe(true)
+    if (start.ok && midnight.ok) {
+      expect(civilDaysForInterval(start.time, midnight.time, { endExclusive: true })).toEqual([
+        '2024-09-16',
+        '2024-09-17',
+      ])
+      const sameInstantInAnotherZone = eventTimeFromInstant(start.time.instant, 'America/New_York')
+      expect(civilDaysForInterval(start.time, sameInstantInAnotherZone, { endExclusive: true })).toEqual(['2024-09-16'])
+    }
   })
 
   it('requires an explicit occurrence for a repeated civil time', () => {
