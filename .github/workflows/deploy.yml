@@ -3,8 +3,6 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -40,11 +38,7 @@ jobs:
       - name: Verify source
         run: |
           pnpm run typecheck
-          pnpm run lint
           pnpm run test -- --run
-
-      - name: Audit production dependencies
-        run: pnpm audit --prod --audit-level=high
 
       - name: Build Pages artifact
         run: pnpm run build

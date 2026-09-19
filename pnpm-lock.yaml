@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@fontsource-variable/figtree':
+        specifier: 5.2.6
+        version: 5.2.6
+      '@fontsource-variable/fraunces':
+        specifier: 5.2.6
+        version: 5.2.6
       '@js-temporal/polyfill':
         specifier: 0.5.1
         version: 0.5.1
@@ -51,6 +57,9 @@ importers:
       eslint:
         specifier: 10.11.0
         version: 10.11.0
+      fake-indexeddb:
+        specifier: 6.2.4
+        version: 6.2.4
       globals:
         specifier: 17.12.0
         version: 17.12.0
@@ -188,6 +197,12 @@ packages:
     peerDependenciesMeta:
       '@noble/hashes':
         optional: true
+
+  '@fontsource-variable/figtree@5.2.6':
+    resolution: {integrity: sha512-3uPFk3gDc9ps5YR6D+mE+o0TAV8PguSyJsqaP+i6AXxjL9GD2FNPWNO6YPVCARQhW2LwH6Ck9YzpwhBln+mDpg==}
+
+  '@fontsource-variable/fraunces@5.2.6':
+    resolution: {integrity: sha512-r6ZYF7GDK2ANQBAXuuSUtoJslFzCTANlgfhDUnxlWHt/uHstAukqtRXaMcwVmmvzAo/KtuPo9zlPjkLxWYYEzw==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -645,6 +660,10 @@ packages:
   expect-type@1.4.0:
     resolution: {integrity: sha512-KfYbmpRm0VbLjEvVa9yGwCi9GI34xvi7A/HXYWQO65CSD2u3MczUJSuwXKFIxlGsgBQizV9q5J9NHj4VG0n+pA==}
     engines: {node: '>=12.0.0'}
+
+  fake-indexeddb@6.2.4:
+    resolution: {integrity: sha512-INKeIKEtSViN4yVtEWEUqbsqmaIy7Ls+MfU0yxQVXg67pOJ/sH1ZxcVrP8XrKULUFohcPD9gnmym+qBfEybACw==}
+    engines: {node: '>=18'}
 
   fast-deep-equal@3.1.3:
     resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
@@ -1295,6 +1314,10 @@ snapshots:
 
   '@exodus/bytes@1.15.1': {}
 
+  '@fontsource-variable/figtree@5.2.6': {}
+
+  '@fontsource-variable/fraunces@5.2.6': {}
+
   '@humanfs/core@0.19.2':
     dependencies:
       '@humanfs/types': 0.15.0
@@ -1712,6 +1735,8 @@ snapshots:
   esutils@2.0.3: {}
 
   expect-type@1.4.0: {}
+
+  fake-indexeddb@6.2.4: {}
 
   fast-deep-equal@3.1.3: {}
 
