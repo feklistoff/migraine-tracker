@@ -2,6 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { App } from './app/App'
+import '@fontsource-variable/figtree'
+import '@fontsource-variable/fraunces'
 import './styles/global.css'
 
 const root = document.getElementById('root')

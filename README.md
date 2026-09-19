@@ -11,18 +11,16 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Checks used by the project:
+Checks run before deployment:
 
 ```sh
 pnpm run typecheck
-pnpm run lint
 pnpm run test -- --run
 pnpm run build
-pnpm run test:e2e
 ```
 
 `pnpm run build` also checks `dist/index.html` for the restrictive CSP, its placement before scripts, absence of inline scripts, and privacy metadata. The browser e2e tests use the development server.
 
-CI runs source checks, a production dependency audit, and the build on pull requests to `main` and pushes to `main`. Only pushes to `main` deploy; manual workflow runs validate without deploying. Dependabot version updates wait seven days after release.
+One GitHub Actions workflow runs TypeScript checks, unit tests, and the build on pushes to `main`, then deploys to GitHub Pages. Manual workflow runs validate without deploying. Pull requests do not trigger this workflow.
 
-The required **Audit production dependencies** step fails if npm's audit service is unavailable as well as when it finds high/critical vulnerabilities. For a service error such as HTTP 503, rerun the workflow after the service recovers; do not bypass the audit.
+Run `pnpm run lint` and `pnpm run test:e2e` locally when relevant to a change. Dependency updates are manual; there are no scheduled Dependabot version-update PRs. Run `pnpm audit --prod` when reviewing dependencies; the audit is not a deployment gate.
