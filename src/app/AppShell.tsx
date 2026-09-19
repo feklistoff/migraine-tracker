@@ -83,6 +83,10 @@ export interface EntryShellProps {
   backHref?: string
   dirty?: boolean
   onDiscard?: () => void
+  onAction?: () => void
+  actionDisabled?: boolean
+  actionBusy?: boolean
+  actionError?: string | null
 }
 
 export function EntryShell({
@@ -93,6 +97,10 @@ export function EntryShell({
   backHref = '#today',
   dirty = false,
   onDiscard,
+  onAction,
+  actionDisabled = false,
+  actionBusy = false,
+  actionError = null,
 }: EntryShellProps) {
   return (
     <div className="diary-shell diary-shell--entry">
@@ -103,9 +111,16 @@ export function EntryShell({
         </div>
       </main>
       <footer className="entry-footer">
-        <button className="primary-action" type="button" disabled>
+        <button
+          className="primary-action"
+          type="button"
+          disabled={actionDisabled || actionBusy}
+          aria-busy={actionBusy || undefined}
+          onClick={onAction}
+        >
           {actionLabel}
         </button>
+        {actionError ? <p className="form-error" role="alert">{actionError}</p> : null}
         <p>{footerNote}</p>
       </footer>
     </div>

@@ -172,6 +172,7 @@ export class DiaryRepository {
   private readonly readFault?: () => void
   private readonly writeFault?: (info: WriteFaultInfo) => void
   private database?: DiaryDatabase
+  private opening?: Promise<DiaryFacts>
   private facts?: DiaryFacts
   private currentStatus: RepositoryStatus = 'idle'
   private currentError?: Error
@@ -205,6 +206,17 @@ export class DiaryRepository {
       return clone(this.facts)
     }
 
+    if (this.opening) return this.opening
+
+    this.opening = this.openDatabase()
+    try {
+      return await this.opening
+    } finally {
+      this.opening = undefined
+    }
+  }
+
+  private async openDatabase(): Promise<DiaryFacts> {
     this.currentStatus = 'loading'
     this.currentError = undefined
     this.emit()
@@ -271,8 +283,15 @@ export class DiaryRepository {
   }
 
   notifyWriteFailure(error: unknown): void {
-    this.currentStatus = 'error'
     this.currentError = toError(error, 'The diary could not be saved.')
+    // A failed write is rolled back by IndexedDB. Keep the last committed
+    // facts available so a form can retain its draft and retry; only opening
+    // and read failures replace the repository with a hard error state.
+    if (this.database && this.facts) {
+      this.currentStatus = 'ready'
+    } else {
+      this.currentStatus = 'error'
+    }
     this.emit()
   }
 
