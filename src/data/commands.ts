@@ -7,11 +7,15 @@ import {
 } from '../domain/episodes'
 import {
   civilDay,
-  civilDaysForInterval,
   compareInstants,
+  episodeEvidenceDays,
+  headacheEvidenceDays,
+  isPositivePain,
+} from '../domain/calendar'
+import {
   elapsedMilliseconds,
-  eventTimeFromInstant,
   instantFromEventTime,
+  nowEventTime,
 } from '../domain/time'
 import {
   validateDoseBounds,
@@ -48,11 +52,32 @@ export interface CommandOptions {
 
 export type EpisodeChanges = Partial<Pick<Episode, 'start' | 'state' | 'end' | 'note'>>
 
+export type OnsetReadingDetails = Pick<Reading, 'pain' | 'impact' | 'note'>
+
 export type ReadingInput = Omit<Reading, 'id' | 'createdAt' | 'updatedAt'> &
   Partial<Pick<Reading, 'id' | 'createdAt' | 'updatedAt'>>
 
 export type DoseInput = Omit<Dose, 'id' | 'createdAt' | 'updatedAt'> &
   Partial<Pick<Dose, 'id' | 'createdAt' | 'updatedAt'>>
+
+export interface SaveDoseOptions extends CommandOptions {
+  /** Save a one-off medicine as a saved option in the same transaction. */
+  saveToMedicineList?: boolean
+}
+
+export interface RetrospectiveDoseInput extends Omit<Dose, 'id' | 'episodeId' | 'createdAt' | 'updatedAt'> {
+  /** Save a one-off medicine as a reusable option in this same transaction. */
+  saveToMedicineList?: boolean
+}
+
+export interface RetrospectiveEpisodeInput {
+  id?: string
+  start: RecordedTime
+  end: RecordedTime | null
+  note?: string | null
+  initialReading?: Pick<Reading, 'pain' | 'impact'> & Partial<Pick<Reading, 'note'>>
+  doses: readonly RetrospectiveDoseInput[]
+}
 
 export type DailyRecordInput = Omit<DailyRecord, 'createdAt' | 'updatedAt'> &
   Partial<Pick<DailyRecord, 'createdAt' | 'updatedAt'>>
@@ -101,6 +126,66 @@ function validationFailure(issues: readonly ValidationIssue[]): ValidationComman
   return new ValidationCommandError(issues)
 }
 
+function assertDoseMedicineChoice(record: Dose, facts: DiaryFacts, existing?: Dose): void {
+  if (record.savedMedicineId && !facts.medicines.some((medicine) => medicine.id === record.savedMedicineId)) {
+    throw validationFailure([
+      {
+        code: 'missing-medicine',
+        path: 'savedMedicineId',
+        message: 'The selected saved medicine no longer exists.',
+      },
+    ])
+  }
+
+  const selectedMedicine = record.savedMedicineId
+    ? facts.medicines.find((medicine) => medicine.id === record.savedMedicineId)
+    : undefined
+  if (selectedMedicine?.archived && existing?.savedMedicineId !== selectedMedicine.id) {
+    throw validationFailure([
+      {
+        code: 'invalid-medicine',
+        path: 'savedMedicineId',
+        message: 'Choose an active saved medicine or enter a one-off medicine and dose.',
+      },
+    ])
+  }
+}
+
+function medicineFromDose(record: Dose, repository: DiaryRepository): SavedMedicine {
+  return auditRecord(
+    {
+      id: newId(),
+      name: record.medicineName.trim(),
+      doseText: record.doseText.trim(),
+      archived: false,
+    } as SavedMedicine,
+    repository,
+  )
+}
+
+function prepareDoseRecord(
+  repository: DiaryRepository,
+  facts: DiaryFacts,
+  input: DoseInput | Dose,
+  episode: Episode,
+  options: { existing?: Dose; linkedReadings?: readonly Reading[]; saveToMedicineList?: boolean } = {},
+): { record: Dose; newMedicine?: SavedMedicine } {
+  let record = auditRecord({ ...input, id: input.id ?? newId() } as Dose, repository, options.existing)
+  const linkedReadings = options.linkedReadings ?? facts.readings.filter((reading) => reading.linkedDoseId === record.id)
+  const result = validateDoseBounds(record, episode, { clock: repository.clock, linkedReadings })
+  if (!result.valid) throw validationFailure(result.issues)
+
+  assertDoseMedicineChoice(record, facts, options.existing)
+
+  if (options.saveToMedicineList && !record.savedMedicineId) {
+    const newMedicine = medicineFromDose(record, repository)
+    record = { ...record, savedMedicineId: newMedicine.id }
+    return { record, newMedicine }
+  }
+
+  return { record }
+}
+
 function assertExpectedRevision(facts: DiaryFacts, options: CommandOptions): void {
   if (options.expectedRevision === undefined) return
   if (options.expectedRevision !== facts.metadata.revision) {
@@ -114,6 +199,7 @@ async function runAtomicWrite<T>(
   options: CommandOptions,
   write: (context: CommandContext) => Promise<WriteOperation<T>>,
 ): Promise<T> {
+  let operationResult: T
   try {
     const database = await repository.getDatabase()
     const expectedRevision = options.expectedRevision ?? repository.snapshot().facts?.metadata.revision
@@ -128,7 +214,7 @@ async function runAtomicWrite<T>(
       dailyRecords: database.dailyRecords,
     }
 
-    const operationResult = await database.transaction(
+    operationResult = await database.transaction(
       'rw',
       Object.values(tables),
       async () => {
@@ -150,15 +236,21 @@ async function runAtomicWrite<T>(
         return result.value
       },
     )
-
-    // Re-read after commit so subscribers get a snapshot from the committed
-    // transaction, including writes made in another tab/context.
-    await repository.read()
-    return operationResult
   } catch (error) {
     repository.notifyWriteFailure(error)
     throw error
   }
+
+  // The write has committed at this point. A failed refresh must not be
+  // reported as a failed save because retrying could duplicate the write.
+  // repository.read() publishes its own recoverable read-error state.
+  try {
+    await repository.read()
+  } catch {
+    // Keep the successful command result; the repository snapshot carries the
+    // refresh error and lets the app offer its normal recovery path.
+  }
+  return operationResult
 }
 
 export async function startEpisode(
@@ -176,6 +268,92 @@ export async function startEpisode(
     await tables.episodes.add(result.value)
     await clearConflictingConfirmations(tables, [result.value], repository)
     return { value: result.value }
+  })
+}
+
+/**
+ * Save a completed or unknown-ended past headache, its optional onset reading,
+ * and every staged dose as one revision-guarded IndexedDB transaction.
+ */
+export async function saveRetrospectiveEpisode(
+  repository: DiaryRepository,
+  input: RetrospectiveEpisodeInput,
+  options: CommandOptions = {},
+): Promise<Episode> {
+  return runAtomicWrite(repository, 'save-retrospective-episode', options, async ({ facts, tables }) => {
+    const { id, start, end, note, initialReading, doses: stagedDoses } = input
+    const episode = auditRecord(
+      {
+        id: id ?? newId(),
+        start,
+        state: end === null ? 'end_unknown' : 'ended',
+        end,
+        note: note ?? null,
+      } as Episode,
+      repository,
+    )
+    const episodeResult = validateEpisode(episode, {
+      clock: repository.clock,
+      existingEpisodes: facts.episodes,
+    })
+    if (!episodeResult.valid) throw validationFailure(episodeResult.issues)
+
+    const newMedicines: SavedMedicine[] = []
+    const newDoses: Dose[] = []
+    for (const [doseIndex, stagedDose] of stagedDoses.entries()) {
+      const { saveToMedicineList, ...doseInput } = stagedDose
+      let prepared: ReturnType<typeof prepareDoseRecord>
+      try {
+        prepared = prepareDoseRecord(
+          repository,
+          facts,
+          { ...doseInput, id: newId(), episodeId: episode.id },
+          episode,
+          { saveToMedicineList, linkedReadings: [] },
+        )
+      } catch (error) {
+        if (!(error instanceof ValidationCommandError)) throw error
+        throw new ValidationCommandError(error.issues.map((issue) => ({
+          ...issue,
+          path: `doses[${doseIndex}].${issue.path}`,
+        })))
+      }
+      newDoses.push(prepared.record)
+      if (prepared.newMedicine) newMedicines.push(prepared.newMedicine)
+    }
+
+    const hasInitialDetails = Boolean(initialReading && (
+      initialReading.pain !== null || initialReading.impact !== null || initialReading.note?.trim()
+    ))
+    const onsetReading = hasInitialDetails && initialReading
+      ? auditRecord(
+          {
+            id: newId(),
+            episodeId: episode.id,
+            measuredAt: episode.start,
+            pain: initialReading.pain,
+            impact: initialReading.impact,
+            note: initialReading.note?.trim() || null,
+            linkedDoseId: null,
+            atOnset: true,
+          } as Reading,
+          repository,
+        )
+      : undefined
+    if (onsetReading) {
+      const readingResult = validateReadingBounds(onsetReading, episode, {
+        clock: repository.clock,
+        doses: newDoses,
+      })
+      if (!readingResult.valid) throw validationFailure(readingResult.issues)
+    }
+
+    if (newMedicines.length > 0) await tables.medicines.bulkAdd(newMedicines)
+    await tables.episodes.add(episode)
+    if (onsetReading) await tables.readings.add(onsetReading)
+    if (newDoses.length > 0) await tables.doses.bulkAdd(newDoses)
+    await clearConflictingConfirmations(tables, [episode, ...(onsetReading ? [onsetReading] : []), ...newDoses], repository)
+    return { value: episode }
   })
 }
 
@@ -232,6 +410,64 @@ export async function editEpisode(
     await tables.episodes.put(result.value)
     if (movedOnsetReadings.length > 0) await tables.readings.bulkPut(movedOnsetReadings)
     await clearConflictingConfirmations(tables, [result.value], repository)
+    return { value: result.value }
+  })
+}
+
+/**
+ * Edit retrospective episode details and its optional onset reading as one
+ * revision-guarded transaction.
+ */
+export async function editEpisodeWithOnsetReading(
+  repository: DiaryRepository,
+  episodeId: string,
+  changes: EpisodeChanges,
+  onsetDetails: OnsetReadingDetails | null,
+  options: CommandOptions = {},
+): Promise<Episode> {
+  return runAtomicWrite(repository, 'edit-episode-with-onset-reading', options, async ({ facts, tables }) => {
+    const episode = requireEpisode(facts, episodeId)
+    const candidate: Episode = {
+      ...episode,
+      ...changes,
+      updatedAt: now(repository),
+    }
+    const result = validateEpisode(candidate, {
+      clock: repository.clock,
+      existingEpisodes: facts.episodes.filter((item) => item.id !== episodeId),
+    })
+    if (!result.valid) throw validationFailure(result.issues)
+
+    const existingOnset = facts.readings.find((reading) => reading.episodeId === episodeId && reading.atOnset)
+    const onsetReading = onsetDetails
+      ? auditRecord(
+          {
+            id: existingOnset?.id ?? newId(),
+            episodeId,
+            measuredAt: result.value.start,
+            pain: onsetDetails.pain,
+            impact: onsetDetails.impact,
+            note: onsetDetails.note,
+            linkedDoseId: null,
+            atOnset: true,
+          } as Reading,
+          repository,
+          existingOnset,
+        )
+      : null
+    const readings = facts.readings.filter((reading) => reading.id !== existingOnset?.id)
+    if (onsetReading) readings.push(onsetReading)
+    const factsForValidation = { ...facts, readings }
+    await validateEpisodeChildren(result.value, factsForValidation, repository)
+
+    await tables.episodes.put(result.value)
+    if (onsetReading) await tables.readings.put(onsetReading)
+    else if (existingOnset) await tables.readings.delete(existingOnset.id)
+    await clearConflictingConfirmations(
+      tables,
+      [result.value, ...(onsetReading ? [onsetReading] : [])],
+      repository,
+    )
     return { value: result.value }
   })
 }
@@ -301,7 +537,7 @@ export async function saveReading(
       repository,
       existing,
     )
-    const result = validateReadingBounds(record, episode, { clock: repository.clock })
+    const result = validateReadingBounds(record, episode, { clock: repository.clock, doses: facts.doses })
     if (!result.valid) throw validationFailure(result.issues)
 
     await tables.readings.put(record)
@@ -326,28 +562,38 @@ export async function deleteReading(
 export async function saveDose(
   repository: DiaryRepository,
   input: DoseInput | Dose,
-  options: CommandOptions = {},
+  options: SaveDoseOptions = {},
 ): Promise<Dose> {
   return runAtomicWrite(repository, 'save-dose', options, async ({ facts, tables }) => {
     const episode = requireEpisode(facts, input.episodeId)
     const existing = input.id ? facts.doses.find((dose) => dose.id === input.id) : undefined
-    const record = auditRecord({ ...input, id: input.id ?? newId() } as Dose, repository, existing)
-    const result = validateDoseBounds(record, episode, { clock: repository.clock })
-    if (!result.valid) throw validationFailure(result.issues)
+    const prepared = prepareDoseRecord(repository, facts, input, episode, {
+      existing,
+      saveToMedicineList: options.saveToMedicineList,
+    })
+    if (prepared.newMedicine) await tables.medicines.add(prepared.newMedicine)
 
-    if (record.savedMedicineId && !facts.medicines.some((medicine) => medicine.id === record.savedMedicineId)) {
-      throw validationFailure([
-        {
-          code: 'missing-medicine',
-          path: 'savedMedicineId',
-          message: 'The selected saved medicine no longer exists.',
-        },
-      ])
-    }
+    await tables.doses.put(prepared.record)
+    await clearConflictingConfirmations(tables, [prepared.record], repository)
+    return { value: prepared.record }
+  })
+}
 
-    await tables.doses.put(record)
-    await clearConflictingConfirmations(tables, [record], repository)
-    return { value: record }
+export async function deleteDose(
+  repository: DiaryRepository,
+  doseId: string,
+  options: CommandOptions = {},
+): Promise<void> {
+  await runAtomicWrite(repository, 'delete-dose', options, async ({ facts, tables }) => {
+    const dose = facts.doses.find((candidate) => candidate.id === doseId)
+    if (!dose) throw new MissingRecordError('dose', doseId)
+    const linkedReadings = facts.readings
+      .filter((reading) => reading.linkedDoseId === doseId)
+      .map((reading) => ({ ...reading, linkedDoseId: null, updatedAt: now(repository) }))
+
+    if (linkedReadings.length > 0) await tables.readings.bulkPut(linkedReadings)
+    await tables.doses.delete(doseId)
+    return { value: undefined }
   })
 }
 
@@ -362,7 +608,9 @@ export async function saveDailyRecord(
 
     const existing = facts.dailyRecords.find((record) => record.day === input.day)
     const record = auditRecord({ ...input } as DailyRecord, repository, existing)
-    if (record.headacheFreeAt && evidenceDays(facts, repository).has(record.day)) record.headacheFreeAt = null
+    if (record.headacheFreeAt && headacheEvidenceDays(facts, nowEventTime(repository.clock)).has(record.day)) {
+      record.headacheFreeAt = null
+    }
 
     const isBlank =
       record.headacheFreeAt === null &&
@@ -475,13 +723,14 @@ async function validateEpisodeChildren(
 ): Promise<void> {
   const readings = facts.readings.filter((reading) => reading.episodeId === episode.id)
   for (const reading of readings) {
-    const result = validateReadingBounds(reading, episode, { clock: repository.clock })
+    const result = validateReadingBounds(reading, episode, { clock: repository.clock, doses: facts.doses })
     if (!result.valid) throw validationFailure(result.issues)
   }
 
   const doses = facts.doses.filter((dose) => dose.episodeId === episode.id)
   for (const dose of doses) {
-    const result = validateDoseBounds(dose, episode, { clock: repository.clock })
+    const linkedReadings = facts.readings.filter((reading) => reading.linkedDoseId === dose.id)
+    const result = validateDoseBounds(dose, episode, { clock: repository.clock, linkedReadings })
     if (!result.valid) throw validationFailure(result.issues)
   }
 }
@@ -492,22 +741,6 @@ function requireEpisode(facts: DiaryFacts, episodeId: string): Episode {
   return episode
 }
 
-function isPositivePain(pain: Reading['pain']): boolean {
-  return pain !== null && (pain.kind === 'numeric' ? pain.value > 0 : pain.value !== 'none')
-}
-
-function evidenceDays(facts: DiaryFacts, repository: DiaryRepository): Set<string> {
-  const days = new Set<string>()
-  for (const episode of facts.episodes) {
-    for (const day of episodeEvidenceDays(episode, repository)) days.add(day)
-  }
-  for (const reading of facts.readings) {
-    if (isPositivePain(reading.pain)) days.add(civilDay(reading.measuredAt))
-  }
-  for (const dose of facts.doses) days.add(civilDay(dose.takenAt))
-  return days
-}
-
 async function clearConflictingConfirmations(
   tables: DiaryTables,
   records: readonly (Episode | Reading | Dose)[],
@@ -516,7 +749,7 @@ async function clearConflictingConfirmations(
   const days = new Set<string>()
   for (const record of records) {
     if ('start' in record) {
-      for (const day of episodeEvidenceDays(record, repository)) days.add(day)
+      for (const day of episodeEvidenceDays(record, nowEventTime(repository.clock))) days.add(day)
     } else if ('measuredAt' in record) {
       if (isPositivePain(record.pain)) days.add(civilDay(record.measuredAt))
     } else {
@@ -537,13 +770,6 @@ async function clearConflictingConfirmations(
       else await tables.dailyRecords.put(cleared)
     }
   }
-}
-
-function episodeEvidenceDays(episode: Episode, repository: DiaryRepository): string[] {
-  if (episode.state === 'end_unknown') return [civilDay(episode.start)]
-
-  const end = episode.end ?? eventTimeFromInstant(repository.clock.now(), repository.clock.timeZone())
-  return civilDaysForInterval(episode.start, end, { endExclusive: episode.end !== null })
 }
 
 function validateDailyRecordInput(input: DailyRecordInput | DailyRecord, repository: DiaryRepository): ValidationIssue[] {

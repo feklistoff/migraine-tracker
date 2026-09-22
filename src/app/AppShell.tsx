@@ -81,6 +81,7 @@ export interface EntryShellProps {
   footerNote: string
   actionLabel: string
   backHref?: string
+  backLabel?: string
   dirty?: boolean
   onDiscard?: () => void
   onAction?: () => void
@@ -95,6 +96,7 @@ export function EntryShell({
   footerNote,
   actionLabel,
   backHref = '#today',
+  backLabel = 'Back to Today',
   dirty = false,
   onDiscard,
   onAction,
@@ -106,7 +108,7 @@ export function EntryShell({
     <div className="diary-shell diary-shell--entry">
       <main className="diary-main">
         <div className="diary-content diary-content--entry">
-          <PageHeader title={title} backHref={backHref} dirty={dirty} onDiscard={onDiscard} />
+          <PageHeader title={title} backHref={backHref} backLabel={backLabel} dirty={dirty} onDiscard={onDiscard} />
           {children}
         </div>
       </main>

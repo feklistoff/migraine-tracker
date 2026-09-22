@@ -1,8 +1,13 @@
 import { PlatformSpikePage } from '../features/platform/PlatformSpikePage'
 import { StartHeadachePage } from '../features/episodes/StartHeadachePage'
+import { PastHeadachePage } from '../features/episodes/PastHeadachePage'
+import { ReadingPage } from '../features/episodes/ReadingPage'
+import { DosePage } from '../features/episodes/DosePage'
+import { TimelinePage } from '../features/episodes/TimelinePage'
+import { CheckinPage } from '../features/checkins/CheckinPage'
 import { SettingsPage } from '../features/settings/SettingsPage'
 import { TodayPage } from '../features/today/TodayPage'
-import { AppShell, EntryShell, PageHeader } from './AppShell'
+import { AppShell, PageHeader } from './AppShell'
 import { defaultDiaryRepository, useDiaryRepository } from './useDiary'
 import { useAppRoute, type AppRoute } from './Router'
 import type { DiaryRepository } from '../data/repository'
@@ -18,17 +23,6 @@ function PlaceholderPage({ route, title, description }: { route: AppRoute; title
         <p>{description}</p>
       </section>
     </AppShell>
-  )
-}
-
-function EntryPage({ title, description, actionLabel }: { title: string; description: string; actionLabel: string }) {
-  return (
-    <EntryShell title={title} actionLabel={actionLabel} footerNote="This form will be connected in the next diary step." actionDisabled>
-      <section className="form-placeholder" aria-label={title}>
-        <h2>{description}</h2>
-        <p>Your time and details will stay editable when this form is connected to the diary.</p>
-      </section>
-    </EntryShell>
   )
 }
 
@@ -79,22 +73,22 @@ function RoutedApp({ route, repository, facts }: { route: AppRoute; repository: 
     return <SettingsPage route={route} facts={facts} repository={repository} />
   }
   if (route.kind === 'page' && route.page === 'timeline') {
-    return <PlaceholderPage route={route} title="Headache" description="A saved headache timeline will be available here." />
+    return <TimelinePage route={route} facts={facts} repository={repository} />
   }
   if (route.kind === 'entry' && route.page === 'start') {
     return <StartHeadachePage route={route} facts={facts} repository={repository} />
   }
   if (route.kind === 'entry' && route.page === 'past') {
-    return <EntryPage title="Past headache" description="When did it happen?" actionLabel="Save headache" />
+    return <PastHeadachePage key={route.episodeId ?? 'new-past-headache'} route={route} facts={facts} repository={repository} />
   }
   if (route.kind === 'entry' && route.page === 'checkin') {
-    return <EntryPage title="Yesterday & last night" description="What was yesterday like?" actionLabel="Save" />
+    return <CheckinPage key={route.selectedDay ?? 'today'} route={route} facts={facts} repository={repository} />
   }
-  if (route.kind === 'entry' && route.page === 'follow-up') {
-    return <EntryPage title="Follow-up check" description="How much does it hurt now?" actionLabel="Save follow-up" />
+  if (route.kind === 'entry' && (route.page === 'update' || route.page === 'follow-up')) {
+    return <ReadingPage route={route} facts={facts} repository={repository} />
   }
   if (route.kind === 'entry' && route.page === 'dose') {
-    return <EntryPage title="Log dose" description="Which medicine?" actionLabel="Log dose" />
+    return <DosePage route={route} facts={facts} repository={repository} />
   }
 
   return <TodayPage route={{ kind: 'tab', tab: 'today' }} facts={facts} repository={repository} />

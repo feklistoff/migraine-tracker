@@ -1,3 +1,5 @@
+import { Temporal } from '@js-temporal/polyfill'
+
 import type { RecordedTime } from '../domain/types'
 
 const ISO_WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const
@@ -30,6 +32,27 @@ function formatWeekday(weekday: number, locale: string): string {
 
 function eventDate(value: RecordedTime): Date {
   return new Date(value.instant)
+}
+
+function civilDateAsUtcDate(day: string): Date {
+  const date = Temporal.PlainDate.from(day)
+  return new Date(Date.UTC(date.year, date.month - 1, date.day, 12))
+}
+
+export function formatCivilDay(day: string, locale = deviceLocale()): string {
+  return new Intl.DateTimeFormat(locale, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'UTC',
+  }).format(civilDateAsUtcDate(day))
+}
+
+export function formatCivilWeekday(day: string, locale = deviceLocale()): string {
+  return new Intl.DateTimeFormat(locale, {
+    weekday: 'long',
+    timeZone: 'UTC',
+  }).format(civilDateAsUtcDate(day))
 }
 
 export function formatEventDate(value: RecordedTime, locale = deviceLocale()): string {

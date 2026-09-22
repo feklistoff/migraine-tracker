@@ -19,6 +19,10 @@ export type ValidationIssueCode =
   | 'invalid-day'
   | 'missing-medicine'
   | 'invalid-medicine'
+  | 'missing-dose'
+  | 'dose-episode-mismatch'
+  | 'reading-before-dose'
+  | 'follow-up-disabled'
 
 export interface ValidationIssue {
   code: ValidationIssueCode
@@ -33,6 +37,8 @@ export type ValidationResult<T> =
 export interface ValidationContext {
   clock: Clock
   existingEpisodes?: readonly Episode[]
+  doses?: readonly Dose[]
+  linkedReadings?: readonly Reading[]
 }
 
 const verbalPainValues = new Set(['none', 'mild', 'moderate', 'severe'])
@@ -152,7 +158,7 @@ export function validateEpisode(episode: Episode, context: ValidationContext): V
 export function validateReadingBounds(
   reading: Reading,
   episode: Episode,
-  context: Pick<ValidationContext, 'clock'>,
+  context: Pick<ValidationContext, 'clock'> & Partial<Pick<ValidationContext, 'doses'>>,
 ): ValidationResult<Reading> {
   const issues: ValidationIssue[] = []
   const timeIssue = validateEventTime(reading.measuredAt, 'measuredAt')
@@ -169,6 +175,23 @@ export function validateReadingBounds(
   const impact = validateImpact(reading.impact)
   if (!impact.valid) issues.push(...impact.issues)
 
+  if (reading.linkedDoseId && context.doses) {
+    const linkedDose = context.doses.find((dose) => dose.id === reading.linkedDoseId)
+    if (!linkedDose) {
+      issues.push(issue('missing-dose', 'linkedDoseId', 'The dose for this follow-up no longer exists.'))
+    } else {
+      if (linkedDose.episodeId !== episode.id) {
+        issues.push(issue('dose-episode-mismatch', 'linkedDoseId', 'A follow-up must belong to the same headache as its dose.'))
+      }
+      if (!linkedDose.followUpEnabled) {
+        issues.push(issue('follow-up-disabled', 'linkedDoseId', 'This dose was not set to have a follow-up check.'))
+      }
+      if (compareSafely(reading.measuredAt, linkedDose.takenAt) === -1) {
+        issues.push(issue('reading-before-dose', 'measuredAt', 'A follow-up cannot be before its dose was taken.'))
+      }
+    }
+  }
+
   // Post-end readings are deliberately allowed by R-02.3 and are labelled by
   // callers when they build the timeline.
   return issues.length > 0 ? invalid(...issues) : valid(reading)
@@ -177,11 +200,14 @@ export function validateReadingBounds(
 export function validateDoseBounds(
   dose: Dose,
   episode: Episode,
-  context: Pick<ValidationContext, 'clock'>,
+  context: Pick<ValidationContext, 'clock'> & Partial<Pick<ValidationContext, 'linkedReadings'>>,
 ): ValidationResult<Dose> {
   const issues: ValidationIssue[] = []
   const timeIssue = validateEventTime(dose.takenAt, 'takenAt')
   if (timeIssue) issues.push(timeIssue)
+  if (dose.episodeId !== episode.id) {
+    issues.push(issue('dose-episode-mismatch', 'episodeId', 'A dose must belong to the selected headache.'))
+  }
   const future = futureIssue(dose.takenAt, context.clock, 'takenAt')
   if (future) issues.push(future)
   const doseComparedToStart = timeIssue ? null : compareSafely(dose.takenAt, episode.start)
@@ -194,6 +220,24 @@ export function validateDoseBounds(
   }
   if (!followUpIntervals.has(dose.followUpIntervalMinutes)) {
     issues.push(issue('invalid-follow-up-interval', 'followUpIntervalMinutes', 'Follow-up interval must be 30, 60, 90 or 120 minutes.'))
+  }
+
+  if (dose.medicineName.trim() === '' || dose.doseText.trim() === '') {
+    issues.push(issue('invalid-medicine', 'medicineName', 'Enter a medicine name and dose.'))
+  }
+  for (const reading of context.linkedReadings ?? []) {
+    if (reading.episodeId !== episode.id) {
+      issues.push(issue('dose-episode-mismatch', 'episodeId', 'A saved follow-up belongs to a different headache.'))
+      break
+    }
+    if (!dose.followUpEnabled) {
+      issues.push(issue('follow-up-disabled', 'followUpEnabled', 'A dose with a saved follow-up cannot have its check disabled.'))
+      break
+    }
+    if (compareSafely(reading.measuredAt, dose.takenAt) === -1) {
+      issues.push(issue('reading-before-dose', 'takenAt', 'The dose cannot be moved to after its saved follow-up.'))
+      break
+    }
   }
 
   return issues.length > 0 ? invalid(...issues) : valid(dose)
