@@ -1,9 +1,9 @@
 import { useSyncExternalStore } from 'react'
 
 export type TabId = 'today' | 'history' | 'statistics'
-export type EntryPageId = 'start' | 'past' | 'checkin' | 'follow-up' | 'dose'
+export type EntryPageId = 'start' | 'past' | 'checkin' | 'update' | 'follow-up' | 'dose'
 
-type RouteContext = { selectedDay?: string; episodeId?: string }
+type RouteContext = { selectedDay?: string; episodeId?: string; doseId?: string; readingId?: string }
 type TabRoute = { [T in TabId]: { kind: 'tab'; tab: T } & RouteContext }[TabId]
 type PageRoute = {
   [P in 'settings' | 'timeline']: { kind: 'page'; page: P; tab: TabId } & RouteContext
@@ -20,6 +20,8 @@ export function routeHref(route: AppRoute): string {
   if (route.kind !== 'tab' && route.tab !== 'today') query.set('tab', route.tab)
   if (route.selectedDay) query.set('day', route.selectedDay)
   if (route.episodeId) query.set('episode', route.episodeId)
+  if (route.doseId) query.set('dose', route.doseId)
+  if (route.readingId) query.set('reading', route.readingId)
   const queryString = query.toString()
   return `#${path}${queryString ? `?${queryString}` : ''}`
 }
@@ -34,6 +36,8 @@ export function parseRoute(hash: string): AppRoute {
   const query = new URLSearchParams(rawQuery)
   const selectedDay = /^\d{4}-\d{2}-\d{2}$/.test(query.get('day') ?? '') ? query.get('day') ?? undefined : undefined
   const episodeId = query.get('episode')?.trim() || undefined
+  const doseId = query.get('dose')?.trim() || undefined
+  const readingId = query.get('reading')?.trim() || undefined
   const tabQuery = query.get('tab')
 
   if (route === 'history' || route === 'statistics') {
@@ -46,15 +50,19 @@ export function parseRoute(hash: string): AppRoute {
       tab: isTabId(tabQuery) ? tabQuery : 'today',
       ...(selectedDay ? { selectedDay } : {}),
       ...(episodeId ? { episodeId } : {}),
+      ...(doseId ? { doseId } : {}),
+      ...(readingId ? { readingId } : {}),
     }
   }
-  if (route === 'start' || route === 'past' || route === 'checkin' || route === 'follow-up' || route === 'dose') {
+  if (route === 'start' || route === 'past' || route === 'checkin' || route === 'update' || route === 'follow-up' || route === 'dose') {
     return {
       kind: 'entry',
       page: route,
       tab: isTabId(tabQuery) ? tabQuery : 'today',
       ...(selectedDay ? { selectedDay } : {}),
       ...(episodeId ? { episodeId } : {}),
+      ...(doseId ? { doseId } : {}),
+      ...(readingId ? { readingId } : {}),
     }
   }
 

@@ -25,6 +25,10 @@ function normaliseNote(value: string): string | null {
   return note === '' ? null : note
 }
 
+function samePain(one: Pain | null, two: Pain | null): boolean {
+  return one?.kind === two?.kind && one?.value === two?.value
+}
+
 export function StartHeadachePage({ facts, repository, route }: StartHeadachePageProps) {
   const episode = useMemo(
     () => (route.episodeId ? facts.episodes.find((candidate) => candidate.id === route.episodeId) : undefined),
@@ -36,7 +40,7 @@ export function StartHeadachePage({ facts, repository, route }: StartHeadachePag
   )
   const initialStartInput = episode ? dateTimeInputValue(episode.start) : ''
   const [startInput, setStartInput] = useState(initialStartInput)
-  const [painMode, setPainMode] = useState<'numeric' | 'verbal'>(facts.settings.painEntryDefault)
+  const [painMode, setPainMode] = useState<'numeric' | 'verbal'>(initialReading?.pain?.kind ?? facts.settings.painEntryDefault)
   const [pain, setPain] = useState<Pain | null>(initialReading?.pain ?? null)
   const [impact, setImpact] = useState<Impact | null>(initialReading?.impact ?? null)
   const [note, setNote] = useState(episode?.note ?? '')
@@ -59,9 +63,18 @@ export function StartHeadachePage({ facts, repository, route }: StartHeadachePag
     )
   }
 
-  const hasOnsetDetails = pain !== null || impact !== null
+  const initialPain = initialReading?.pain ?? null
+  const hasOnsetDetails = pain !== null || impact !== null || Boolean(initialReading?.note?.trim())
+  const onsetChanged = !samePain(pain, initialPain) || impact !== (initialReading?.impact ?? null)
   const isDirty =
-    startInput !== initialStartInput || normaliseNote(note) !== episode.note || pain !== (initialReading?.pain ?? null) || impact !== (initialReading?.impact ?? null)
+    startInput !== initialStartInput || normaliseNote(note) !== episode.note || onsetChanged
+  const backHref = routeHref({ kind: 'tab', tab: route.tab, ...(route.selectedDay ? { selectedDay: route.selectedDay } : {}) })
+  const backLabel = route.tab === 'history' ? 'Back to History' : 'Back to Today'
+
+  const changePainMode = (mode: 'numeric' | 'verbal') => {
+    if (mode !== painMode && pain && pain.kind !== mode) setPain(null)
+    setPainMode(mode)
+  }
 
   const handleSave = async () => {
     if (busy) return
@@ -95,7 +108,7 @@ export function StartHeadachePage({ facts, repository, route }: StartHeadachePag
         revision = repository.snapshot().facts?.metadata.revision ?? revision + 1
       }
 
-      if (hasOnsetDetails) {
+      if (hasOnsetDetails && onsetChanged) {
         await saveReading(
           repository,
           {
@@ -104,17 +117,17 @@ export function StartHeadachePage({ facts, repository, route }: StartHeadachePag
             measuredAt: nextStart,
             pain,
             impact,
-            note: null,
+            note: initialReading?.note ?? null,
             linkedDoseId: null,
             atOnset: true,
           },
           { expectedRevision: revision },
         )
-      } else if (initialReading) {
+      } else if (!hasOnsetDetails && initialReading && onsetChanged) {
         await deleteReading(repository, initialReading.id, { expectedRevision: revision })
       }
 
-      window.location.hash = routeHref({ kind: 'tab', tab: 'today' })
+      window.location.hash = backHref
     } catch (saveError) {
       setError(errorMessage(saveError))
     } finally {
@@ -125,6 +138,8 @@ export function StartHeadachePage({ facts, repository, route }: StartHeadachePag
   return (
     <EntryShell
       title="New headache"
+      backHref={backHref}
+      backLabel={backLabel}
       actionLabel="Save headache"
       footerNote="The start time is already kept. Add the rest whenever you can."
       dirty={isDirty}
@@ -161,10 +176,10 @@ export function StartHeadachePage({ facts, repository, route }: StartHeadachePag
               <h2 id="pain-heading">How much did it hurt?</h2>
             </div>
             <div className="segmented-control" role="group" aria-label="Pain entry mode">
-              <button type="button" aria-pressed={painMode === 'numeric'} onClick={() => setPainMode('numeric')}>
+              <button type="button" aria-pressed={painMode === 'numeric'} onClick={() => changePainMode('numeric')}>
                 0–10
               </button>
-              <button type="button" aria-pressed={painMode === 'verbal'} onClick={() => setPainMode('verbal')}>
+              <button type="button" aria-pressed={painMode === 'verbal'} onClick={() => changePainMode('verbal')}>
                 Words
               </button>
             </div>

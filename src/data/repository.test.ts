@@ -6,9 +6,11 @@ import { DIARY_STORE_SCHEMAS } from './migrations'
 import {
   deleteEpisode,
   editEpisode,
+  editEpisodeWithOnsetReading,
   finishEpisode,
   saveDailyRecord,
   saveDose,
+  saveRetrospectiveEpisode,
   saveReading,
   startEpisode,
   undoEpisodeEnd,
@@ -63,6 +65,193 @@ describe('transactional diary persistence', () => {
     expect(facts.dailyRecords).toEqual([])
 
     await repository.close()
+  })
+
+  it('saves a multi-day retrospective headache, onset reading and staged doses in one transaction', async () => {
+    const repository = createRepository()
+    await repository.open()
+
+    const episode = await saveRetrospectiveEpisode(repository, {
+      id: 'episode-past',
+      start: fixtureEventTime('2024-09-16T22:30'),
+      end: fixtureEventTime('2024-09-17T02:30'),
+      note: 'Had to leave work early.',
+      initialReading: { pain: { kind: 'verbal', value: 'moderate' }, impact: 'slowed' },
+      doses: [
+        {
+          takenAt: fixtureEventTime('2024-09-16T23:00'),
+          savedMedicineId: null,
+          medicineName: 'Ibuprofen',
+          doseText: '400 mg',
+          followUpEnabled: true,
+          followUpIntervalMinutes: 120,
+          saveToMedicineList: true,
+        },
+        {
+          takenAt: fixtureEventTime('2024-09-17T01:00'),
+          savedMedicineId: null,
+          medicineName: 'Paracetamol',
+          doseText: '500 mg',
+          followUpEnabled: false,
+          followUpIntervalMinutes: 60,
+        },
+      ],
+    }, { expectedRevision: 0 })
+
+    const facts = await repository.read()
+    expect(episode).toMatchObject({ id: 'episode-past', state: 'ended', end: fixtureEventTime('2024-09-17T02:30') })
+    expect(facts.episodes).toHaveLength(1)
+    expect(facts.readings).toHaveLength(1)
+    expect(facts.readings[0]).toMatchObject({
+      episodeId: episode.id,
+      measuredAt: episode.start,
+      pain: { kind: 'verbal', value: 'moderate' },
+      impact: 'slowed',
+      atOnset: true,
+    })
+    expect(facts.doses).toHaveLength(2)
+    expect(facts.doses.map(({ medicineName, doseText }) => [medicineName, doseText])).toEqual(expect.arrayContaining([
+      ['Ibuprofen', '400 mg'],
+      ['Paracetamol', '500 mg'],
+    ]))
+    expect(facts.doses.find(({ medicineName }) => medicineName === 'Ibuprofen')?.savedMedicineId).not.toBeNull()
+    expect(facts.doses.find(({ medicineName }) => medicineName === 'Paracetamol')?.savedMedicineId).toBeNull()
+    expect(facts.medicines.map(({ name, doseText }) => [name, doseText])).toEqual([['Ibuprofen', '400 mg']])
+    expect(facts.metadata.revision).toBe(1)
+  })
+
+  it('rolls back the episode, onset, doses and optional medicine if a retrospective transaction fails', async () => {
+    const repository = createRepository({
+      writeFault: ({ operation, step }) => {
+        if (operation === 'save-retrospective-episode' && step === 'before-revision') {
+          throw new Error('simulated retrospective commit failure')
+        }
+      },
+    })
+    await repository.open()
+
+    await expect(saveRetrospectiveEpisode(repository, {
+      id: 'episode-rollback',
+      start: fixtureEventTime('2024-09-16T22:30'),
+      end: fixtureEventTime('2024-09-17T02:30'),
+      note: 'Draft note',
+      initialReading: { pain: { kind: 'numeric', value: 6 }, impact: 'slowed' },
+      doses: [{
+        takenAt: fixtureEventTime('2024-09-16T23:00'),
+        savedMedicineId: null,
+        medicineName: 'Custom medicine',
+        doseText: '1 tablet',
+        followUpEnabled: true,
+        followUpIntervalMinutes: 120,
+        saveToMedicineList: true,
+      }],
+    })).rejects.toThrow('simulated retrospective commit failure')
+
+    const reloaded = createRepository()
+    const facts = await reloaded.open()
+    expect(facts.episodes).toEqual([])
+    expect(facts.readings).toEqual([])
+    expect(facts.doses).toEqual([])
+    expect(facts.medicines).toEqual([])
+    expect(facts.metadata.revision).toBe(0)
+  })
+
+  it('rolls back a retrospective episode and onset-reading edit as one logical write', async () => {
+    let failEdit = false
+    const repository = createRepository({
+      writeFault: ({ operation, step }) => {
+        if (failEdit && operation === 'edit-episode-with-onset-reading' && step === 'before-revision') {
+          throw new Error('simulated retrospective edit failure')
+        }
+      },
+    })
+    await repository.open()
+    await saveRetrospectiveEpisode(repository, {
+      id: 'episode-atomic-edit',
+      start: fixtureEventTime('2024-09-16T22:30'),
+      end: fixtureEventTime('2024-09-17T02:30'),
+      note: 'Original episode note',
+      initialReading: { pain: { kind: 'numeric', value: 5 }, impact: 'slowed', note: 'Original onset note' },
+      doses: [],
+    })
+
+    failEdit = true
+    await expect(editEpisodeWithOnsetReading(
+      repository,
+      'episode-atomic-edit',
+      { note: 'Changed episode note' },
+      { pain: { kind: 'verbal', value: 'severe' }, impact: 'stopped', note: 'Changed onset note' },
+      { expectedRevision: 1 },
+    )).rejects.toThrow('simulated retrospective edit failure')
+
+    const reloaded = createRepository()
+    const facts = await reloaded.open()
+    expect(facts.episodes[0]).toMatchObject({ note: 'Original episode note' })
+    expect(facts.readings[0]).toMatchObject({
+      pain: { kind: 'numeric', value: 5 },
+      impact: 'slowed',
+      note: 'Original onset note',
+    })
+    expect(facts.metadata.revision).toBe(1)
+  })
+
+  it('rejects overlapping known retrospective episodes but permits unknown-ended records', async () => {
+    const repository = createRepository()
+    await repository.open()
+    await startEpisode(repository, {
+      id: 'episode-ongoing',
+      start: fixtureEventTime('2024-09-18T16:00'),
+      note: null,
+    })
+
+    await expect(saveRetrospectiveEpisode(repository, {
+      id: 'episode-overlap',
+      start: fixtureEventTime('2024-09-18T15:00'),
+      end: fixtureEventTime('2024-09-18T16:30'),
+      note: null,
+      doses: [],
+    })).rejects.toMatchObject({
+      code: 'validation-failed',
+      issues: expect.arrayContaining([expect.objectContaining({ code: 'overlap' })]),
+    })
+
+    const unknown = await saveRetrospectiveEpisode(repository, {
+      id: 'episode-unknown',
+      start: fixtureEventTime('2024-09-18T15:00'),
+      end: null,
+      note: null,
+      doses: [],
+    })
+    expect(unknown).toMatchObject({ state: 'end_unknown', end: null })
+    expect((await repository.read()).episodes).toHaveLength(2)
+  })
+
+  it('qualifies validation paths for each staged retrospective dose', async () => {
+    const repository = createRepository()
+    await repository.open()
+
+    await expect(saveRetrospectiveEpisode(repository, {
+      start: fixtureEventTime('2024-09-18T12:00'),
+      end: fixtureEventTime('2024-09-18T14:00'),
+      doses: [{
+        takenAt: fixtureEventTime('2024-09-18T11:59'),
+        savedMedicineId: null,
+        medicineName: 'Ibuprofen',
+        doseText: '400 mg',
+        followUpEnabled: true,
+        followUpIntervalMinutes: 60,
+      }],
+    }, { expectedRevision: 0 })).rejects.toMatchObject({
+      code: 'validation-failed',
+      issues: expect.arrayContaining([
+        expect.objectContaining({ code: 'child-before-start', path: 'doses[0].takenAt' }),
+      ]),
+    })
+
+    const facts = await repository.read()
+    expect(facts.episodes).toEqual([])
+    expect(facts.doses).toEqual([])
+    expect(facts.metadata.revision).toBe(0)
   })
 
   it('commits a start atomically and notifies subscribers with the next revision', async () => {
@@ -391,6 +580,31 @@ describe('transactional diary persistence', () => {
     expect(facts.dailyRecords).toEqual([])
   })
 
+  it('[R-02.1] rejects a future daily record without changing existing records', async () => {
+    const repository = createRepository()
+    await repository.open()
+    await saveDailyRecord(repository, {
+      day: '2024-09-17',
+      headacheFreeAt: null,
+      alcohol: false,
+      sleep: null,
+      stress: null,
+    })
+
+    await expect(saveDailyRecord(repository, {
+      day: '2024-09-19',
+      headacheFreeAt: null,
+      alcohol: true,
+      sleep: null,
+      stress: null,
+    })).rejects.toMatchObject({
+      code: 'validation-failed',
+      issues: expect.arrayContaining([expect.objectContaining({ code: 'future', path: 'day' })]),
+    })
+
+    expect((await repository.read()).dailyRecords.map(({ day }) => day)).toEqual(['2024-09-17'])
+  })
+
   it('clears every covered day but not the day after a midnight end', async () => {
     const repository = createRepository()
     await repository.open()
@@ -497,6 +711,26 @@ describe('transactional diary persistence', () => {
 
     await expect(repository.open()).rejects.toThrow('read failed')
     expect(repository.snapshot()).toMatchObject({ status: 'error', facts: undefined })
+  })
+
+  it('does not report a committed write as failed when only the post-commit refresh fails', async () => {
+    let readCount = 0
+    const repository = createRepository({
+      readFault: () => {
+        readCount += 1
+        if (readCount === 2) throw new Error('post-commit refresh failed')
+      },
+    })
+    await repository.open()
+
+    await expect(start(repository, 'episode-committed')).resolves.toMatchObject({ id: 'episode-committed' })
+    expect(repository.snapshot()).toMatchObject({ status: 'error', facts: undefined })
+    expect(repository.snapshot().error?.message).toContain('post-commit refresh failed')
+
+    const reloaded = createRepository()
+    const facts = await reloaded.open()
+    expect(facts.episodes.map(({ id }) => id)).toEqual(['episode-committed'])
+    expect(facts.metadata.revision).toBe(1)
   })
 
   it('reports a newer on-device schema as a recoverable opening error', async () => {
