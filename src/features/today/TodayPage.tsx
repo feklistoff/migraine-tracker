@@ -11,6 +11,7 @@ import { formatEventDate, formatEventTime } from '../../app/locale'
 import { AppShell } from '../../app/AppShell'
 import { routeHref, type AppRoute } from '../../app/Router'
 import { EventTimeField, useEventTimeInput } from '../episodes/eventTimeInput'
+import { TodayMonthSummary } from '../statistics/StatisticsPage'
 
 interface TodayPageProps {
   route: Extract<AppRoute, { kind: 'tab' }> & { tab: 'today' }
@@ -656,6 +657,7 @@ export function TodayPage({ route, facts, repository }: TodayPageProps) {
         />
       ) : null}
       {otherFollowUps.map((check) => <FollowUpCard key={check.dose.id} check={check} now={nowRecorded} tab="today" />)}
+      <TodayMonthSummary facts={facts} now={nowRecorded} />
       {recentEpisodes.length > 0 ? (
         <section className="recent-episodes" aria-labelledby="recent-episodes-heading">
           <div>

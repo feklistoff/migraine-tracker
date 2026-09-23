@@ -7,6 +7,8 @@ import { TimelinePage } from '../features/episodes/TimelinePage'
 import { CheckinPage } from '../features/checkins/CheckinPage'
 import { SettingsPage } from '../features/settings/SettingsPage'
 import { TodayPage } from '../features/today/TodayPage'
+import { StatisticsPage } from '../features/statistics/StatisticsPage'
+import { nowEventTime } from '../domain/time'
 import { AppShell, PageHeader } from './AppShell'
 import { defaultDiaryRepository, useDiaryRepository } from './useDiary'
 import { useAppRoute, type AppRoute } from './Router'
@@ -67,7 +69,7 @@ function RoutedApp({ route, repository, facts }: { route: AppRoute; repository: 
     return <PlaceholderPage route={route} title="History" description="Recorded headaches will appear here once the calendar is connected." />
   }
   if (route.kind === 'tab' && route.tab === 'statistics') {
-    return <PlaceholderPage route={route} title="Statistics" description="Your recorded days and observations will be summarised here." />
+    return <StatisticsPage route={route} facts={facts} now={nowEventTime(repository.clock)} />
   }
   if (route.kind === 'page' && route.page === 'settings') {
     return <SettingsPage route={route} facts={facts} repository={repository} />

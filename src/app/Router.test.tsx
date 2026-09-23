@@ -41,7 +41,7 @@ describe('app navigation', () => {
 
     fireEvent.click(screen.getByRole('link', { name: 'Statistics' }))
 
-    await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'Statistics' })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: /September 2024.*so far/ })).toBeInTheDocument())
     expect(window.location.hash).toBe('#statistics')
   })
 
