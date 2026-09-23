@@ -3,6 +3,7 @@ import type { MouseEvent, ReactNode } from 'react'
 import { Icon } from '../components/Icon'
 import type { AppRoute, TabId } from './Router'
 import { routeHref, routeTab } from './Router'
+import { useUpdateBlocker } from '../pwa/useUpdateBlocker'
 
 const tabs: { id: TabId; label: string; icon: 'today' | 'history' | 'statistics' }[] = [
   { id: 'today', label: 'Today', icon: 'today' },
@@ -104,6 +105,7 @@ export function EntryShell({
   actionBusy = false,
   actionError = null,
 }: EntryShellProps) {
+  useUpdateBlocker(true, 'An entry form is open')
   return (
     <div className="diary-shell diary-shell--entry">
       <main className="diary-main">

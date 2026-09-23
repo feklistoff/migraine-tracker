@@ -1,0 +1,33 @@
+.statistics-page { display: grid; gap: 14px; padding: 20px 0 28px; }
+.statistics-month-header { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; }
+.statistics-month-header h1 { text-align: center; font-size: clamp(1.4rem, 6vw, 1.8rem); }
+.statistics-month-header button { min-width: 44px; min-height: 44px; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface); color: var(--color-text); cursor: pointer; }
+.statistics-month-header button:disabled { opacity: .35; cursor: default; }
+.statistics-month-header button span { font-size: 1.7rem; line-height: 1; }
+.statistics-coverage, .statistics-treatment, .today-month-summary { padding: 16px; border: 1px solid var(--color-border); border-radius: 18px; background: var(--color-surface); }
+.statistics-coverage__row { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; }
+.statistics-coverage a, .statistics-treatment a, .today-month-summary a { color: var(--color-accent-text); font-size: .85rem; font-weight: 650; }
+.statistics-coverage__track { height: 8px; margin-top: 10px; overflow: hidden; border-radius: 99px; background: var(--color-sand); }
+.statistics-coverage__track span { display: block; height: 100%; border-radius: inherit; background: var(--color-sage-fill); }
+.statistics-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.statistics-tile { display: grid; align-content: center; gap: 3px; min-height: 116px; padding: 15px; border: 1px solid var(--color-border); border-radius: 17px; background: var(--color-surface); }
+.statistics-tile__value { color: var(--color-accent-text); font-family: 'Fraunces Variable', Fraunces, Georgia, serif; font-size: clamp(1.7rem, 8vw, 2.25rem); font-weight: 500; line-height: 1; }
+.statistics-tile span { font-weight: 650; }
+.statistics-tile small, .statistics-note, .statistics-treatment p, .statistics-dose small, .today-month-summary p { color: var(--color-muted); line-height: 1.45; }
+.statistics-note { margin: 0; font-size: .84rem; }
+.statistics-treatment h2, .today-month-summary h2 { font-size: 1.3rem; }
+.statistics-treatment > p { margin: 8px 0 16px; font-size: .9rem; }
+.statistics-treatment__empty { margin-bottom: 0 !important; }
+.statistics-treatment__row { padding: 15px 0; border-top: 1px solid var(--color-border); }
+.statistics-treatment__row-head { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; }
+.statistics-treatment__row ol { display: grid; gap: 12px; margin: 12px 0 0; padding: 0; list-style: none; }
+.statistics-dose { display: grid; gap: 8px; padding: 12px; border-radius: 12px; background: var(--color-page); }
+.statistics-dose__head, .statistics-dose__observation { display: grid; gap: 3px; }
+.statistics-dose__head span { color: var(--color-muted); }
+.statistics-dose__observation { gap: 5px; font-size: .9rem; }
+.today-month-summary { margin-top: 2px; }
+.today-month-summary > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.today-month-summary > div span { display: grid; gap: 2px; }
+.today-month-summary > div strong { color: var(--color-accent-text); font-family: 'Fraunces Variable', Fraunces, Georgia, serif; font-size: 1.6rem; font-weight: 500; }
+.today-month-summary p { margin: 12px 0 0; font-size: .85rem; }
+@media (max-width: 350px) { .statistics-tiles { gap: 7px; } .statistics-tile { padding: 11px; } }

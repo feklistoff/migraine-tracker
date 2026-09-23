@@ -29,19 +29,26 @@ describe('app navigation', () => {
     expect(parseRoute(routeHref(route))).toEqual(route)
   })
 
+  it('deep-links to a month’s missing-days view', () => {
+    const route = { kind: 'tab' as const, tab: 'history' as const, selectedDay: '2024-09-05', missing: true }
+    expect(routeHref(route)).toBe('#history?day=2024-09-05&missing=1')
+    expect(parseRoute(routeHref(route))).toEqual(route)
+    expect(parseRoute('#history?missing=1')).toEqual({ kind: 'tab', tab: 'history', missing: true })
+  })
+
   it('switches between tabs without losing the shared shell', async () => {
     render(<App repository={repository} />)
     await waitFor(() => expect(screen.getByRole('link', { name: 'History' })).toBeInTheDocument())
 
     fireEvent.click(screen.getByRole('link', { name: 'History' }))
 
-    await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'History' })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'September 2024' })).toBeInTheDocument())
     expect(screen.getByRole('navigation', { name: 'Sections' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'History' })).toHaveAttribute('aria-current', 'page')
 
     fireEvent.click(screen.getByRole('link', { name: 'Statistics' }))
 
-    await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'Statistics' })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: /September 2024.*so far/ })).toBeInTheDocument())
     expect(window.location.hash).toBe('#statistics')
   })
 

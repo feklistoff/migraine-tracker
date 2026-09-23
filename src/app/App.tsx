@@ -1,29 +1,23 @@
+import { useEffect } from 'react'
+
 import { StartHeadachePage } from '../features/episodes/StartHeadachePage'
 import { PastHeadachePage } from '../features/episodes/PastHeadachePage'
 import { ReadingPage } from '../features/episodes/ReadingPage'
 import { DosePage } from '../features/episodes/DosePage'
 import { TimelinePage } from '../features/episodes/TimelinePage'
 import { CheckinPage } from '../features/checkins/CheckinPage'
+import { HistoryPage } from '../features/history/HistoryPage'
 import { SettingsPage } from '../features/settings/SettingsPage'
+import { MakeBackupPage } from '../features/backup/MakeBackupPage'
+import { RestorePage } from '../features/backup/RestorePage'
 import { TodayPage } from '../features/today/TodayPage'
-import { AppShell, PageHeader } from './AppShell'
+import { StatisticsPage } from '../features/statistics/StatisticsPage'
+import { nowEventTime } from '../domain/time'
 import { defaultDiaryRepository, useDiaryRepository } from './useDiary'
 import { useAppRoute, type AppRoute } from './Router'
 import type { DiaryRepository } from '../data/repository'
 import type { DiaryFacts } from '../domain/types'
-
-function PlaceholderPage({ route, title, description }: { route: AppRoute; title: string; description: string }) {
-  return (
-    <AppShell route={route}>
-      <PageHeader title={title} backHref="#today" />
-      <section className="empty-card page-placeholder" aria-labelledby="placeholder-title">
-        <p className="empty-card__mark" aria-hidden="true">·</p>
-        <h2 id="placeholder-title">Nothing recorded yet.</h2>
-        <p>{description}</p>
-      </section>
-    </AppShell>
-  )
-}
+import { subscribeToOtherTabRestores } from '../data/tabSync'
 
 function DiaryLoading() {
   return (
@@ -63,13 +57,19 @@ function RoutedApp({ route, repository, facts }: { route: AppRoute; repository: 
     return <TodayPage route={route} facts={facts} repository={repository} />
   }
   if (route.kind === 'tab' && route.tab === 'history') {
-    return <PlaceholderPage route={route} title="History" description="Recorded headaches will appear here once the calendar is connected." />
+    return <HistoryPage route={route} facts={facts} repository={repository} />
   }
   if (route.kind === 'tab' && route.tab === 'statistics') {
-    return <PlaceholderPage route={route} title="Statistics" description="Your recorded days and observations will be summarised here." />
+    return <StatisticsPage route={route} facts={facts} now={nowEventTime(repository.clock)} />
   }
   if (route.kind === 'page' && route.page === 'settings') {
     return <SettingsPage route={route} facts={facts} repository={repository} />
+  }
+  if (route.kind === 'page' && route.page === 'backup') {
+    return <MakeBackupPage route={route} repository={repository} />
+  }
+  if (route.kind === 'page' && route.page === 'restore') {
+    return <RestorePage route={route} repository={repository} />
   }
   if (route.kind === 'page' && route.page === 'timeline') {
     return <TimelinePage route={route} facts={facts} repository={repository} />
@@ -100,6 +100,8 @@ export interface AppProps {
 export function App({ repository = defaultDiaryRepository }: AppProps = {}) {
   const route = useAppRoute()
   const snapshot = useDiaryRepository(repository)
+
+  useEffect(() => subscribeToOtherTabRestores(() => window.location.reload()), [])
 
   if (snapshot.status === 'loading' || snapshot.status === 'idle') return <DiaryLoading />
   if (snapshot.status === 'error' || !snapshot.facts) return <DiaryError repository={repository} error={snapshot.error} />

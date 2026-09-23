@@ -53,9 +53,12 @@ export function createDiaryDatabase(options: DiaryDatabaseOptions = {}): DiaryDa
 
 export async function openDiaryDatabase(options: DiaryDatabaseOptions = {}): Promise<DiaryDatabase> {
   const database = createDiaryDatabase(options)
+  const blocked = new Promise<never>((_, reject) => {
+    database.on('blocked', () => reject(new Error('A diary database upgrade is blocked. Close other diary tabs or app windows, then try again. Your records have not been reset.')))
+  })
 
   try {
-    await database.open()
+    await Promise.race([database.open(), blocked])
     // Dexie stores its decimal version API as a native IndexedDB integer ten
     // times larger than the declared version.
     const nativeVersion = database.backendDB().version / 10
