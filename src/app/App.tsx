@@ -1,4 +1,3 @@
-import { PlatformSpikePage } from '../features/platform/PlatformSpikePage'
 import { StartHeadachePage } from '../features/episodes/StartHeadachePage'
 import { PastHeadachePage } from '../features/episodes/PastHeadachePage'
 import { ReadingPage } from '../features/episodes/ReadingPage'
@@ -101,9 +100,7 @@ export interface AppProps {
 export function App({ repository = defaultDiaryRepository }: AppProps = {}) {
   const route = useAppRoute()
   const snapshot = useDiaryRepository(repository)
-  const spikeEnabled = new URLSearchParams(window.location.search).get('spike') === '1'
 
-  if (spikeEnabled) return <PlatformSpikePage />
   if (snapshot.status === 'loading' || snapshot.status === 'idle') return <DiaryLoading />
   if (snapshot.status === 'error' || !snapshot.facts) return <DiaryError repository={repository} error={snapshot.error} />
 
