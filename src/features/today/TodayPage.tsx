@@ -8,6 +8,7 @@ import { civilDay, compareInstants, dateTimeInputValue, elapsedMilliseconds, eve
 import { latestDoseForEpisode, todayFollowUps, type DoseFollowUp } from '../../domain/followUps'
 import type { DiaryFacts, Dose, Episode, Impact, Pain, Reading, RecordedTime } from '../../domain/types'
 import { formatEventDate, formatEventTime } from '../../app/locale'
+import { isUndoStateAvailable, type UndoState } from '../../app/undoState'
 import { AppShell } from '../../app/AppShell'
 import { routeHref, type AppRoute } from '../../app/Router'
 import { EventTimeField, useEventTimeInput } from '../episodes/eventTimeInput'
@@ -18,11 +19,8 @@ interface TodayPageProps {
   route: Extract<AppRoute, { kind: 'tab' }> & { tab: 'today' }
   facts: DiaryFacts
   repository: DiaryRepository
-}
-
-interface UndoState {
-  episodeId: string
-  revision: number
+  undoState?: UndoState
+  onUndoChange: (state: UndoState | undefined) => void
 }
 
 function errorMessage(error: unknown): string {
@@ -68,18 +66,16 @@ function readingAge(reading: Reading | undefined, now: ReturnType<DiaryRepositor
   return `${formatDuration(elapsedMilliseconds(reading.measuredAt, now))} ago`
 }
 
-function AppHeader({ title, ended }: { title: string; ended: boolean }) {
+function AppHeader({ title }: { title: string }) {
   return (
     <header className="app-header app-header--diary">
       <div>
         <p className="eyebrow">Private diary</p>
         <h1>{title}</h1>
       </div>
-      {!ended ? (
-        <a className="icon-button" href={routeHref({ kind: 'page', page: 'settings', tab: 'today' })} aria-label="Settings">
-          <Icon name="settings" />
-        </a>
-      ) : null}
+      <a className="icon-button" href={routeHref({ kind: 'page', page: 'settings', tab: 'today' })} aria-label="Settings">
+        <Icon name="settings" />
+      </a>
     </header>
   )
 }
@@ -329,10 +325,9 @@ function EndEditor({ episode, repository, facts, onClose, onSaved, onError }: En
   )
 }
 
-export function TodayPage({ route, facts, repository }: TodayPageProps) {
+export function TodayPage({ route, facts, repository, undoState, onUndoChange }: TodayPageProps) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [undo, setUndo] = useState<UndoState | undefined>()
   const [editingEnd, setEditingEnd] = useState(false)
   const [dismissedCueEpisodeId, setDismissedCueEpisodeId] = useState<string | undefined>()
   const [, setClockTick] = useState(0)
@@ -426,7 +421,7 @@ export function TodayPage({ route, facts, repository }: TodayPageProps) {
       const ended = await finishEpisode(repository, episode.id, nowEventTime(repository.clock), {
         expectedRevision: facts.metadata.revision,
       })
-      setUndo({
+      onUndoChange({
         episodeId: ended.id,
         revision: repository.snapshot().facts?.metadata.revision ?? facts.metadata.revision + 1,
       })
@@ -438,12 +433,12 @@ export function TodayPage({ route, facts, repository }: TodayPageProps) {
   }
 
   const handleUndo = async () => {
-    if (!undo || busy) return
+    if (!undoState || busy) return
     setBusy(true)
     setError(null)
     try {
-      await undoEpisodeEnd(repository, undo.episodeId, { expectedRevision: undo.revision })
-      setUndo(undefined)
+      await undoEpisodeEnd(repository, undoState.episodeId, { expectedRevision: undoState.revision })
+      onUndoChange(undefined)
     } catch (undoError) {
       setError(errorMessage(undoError))
     } finally {
@@ -457,7 +452,7 @@ export function TodayPage({ route, facts, repository }: TodayPageProps) {
     setError(null)
     try {
       await deleteEpisode(repository, episode.id, { expectedRevision: facts.metadata.revision })
-      setUndo(undefined)
+      onUndoChange(undefined)
     } catch (deleteError) {
       setError(errorMessage(deleteError))
     } finally {
@@ -476,7 +471,7 @@ export function TodayPage({ route, facts, repository }: TodayPageProps) {
     setError(null)
     try {
       await deleteDose(repository, dose.id, { expectedRevision: facts.metadata.revision })
-      setUndo(undefined)
+      onUndoChange(undefined)
     } catch (deleteError) {
       setError(errorMessage(deleteError))
     } finally {
@@ -488,7 +483,7 @@ export function TodayPage({ route, facts, repository }: TodayPageProps) {
 
   return (
     <AppShell route={route}>
-      <AppHeader title={title} ended={Boolean(latestEnded && !ongoing)} />
+      <AppHeader title={title} />
       {renderError}
 
       {ongoing ? (
@@ -591,13 +586,13 @@ export function TodayPage({ route, facts, repository }: TodayPageProps) {
                 onClose={() => setEditingEnd(false)}
                 onSaved={() => {
                   setEditingEnd(false)
-                  setUndo(undefined)
+                  onUndoChange(undefined)
                 }}
                 onError={(message) => setError(message || null)}
               />
             ) : null}
           </section>
-          {undo ? (
+          {isUndoStateAvailable(undoState, facts, now.epochMilliseconds) ? (
             <aside className="undo-bar" aria-label="Undo ended headache">
               Headache ended at {latestEnded.end ? formatEventTime(latestEnded.end) : 'the recorded time'}
               <button type="button" onClick={() => void handleUndo()} disabled={busy}>Undo</button>

@@ -66,6 +66,11 @@ async function reviewTheme(page: Page, testInfo: TestInfo, scheme: 'light' | 'da
   await page.getByRole('button', { name: 'Make Synthetic medicine the default' }).click()
   const followUpSetting = page.getByRole('switch', { name: 'Check how a dose worked' })
   if (await followUpSetting.getAttribute('aria-checked') === 'false') await followUpSetting.click()
+  if (scheme === 'dark') {
+    await page.getByRole('button', { name: 'Light' }).click()
+    await capture(page, testInfo, 'Settings-light-override-on-dark-device')
+    await page.getByRole('button', { name: 'System' }).click()
+  }
   await capture(page, testInfo, scheme === 'light' ? 'Settings' : 'Settings-dark')
 
   await page.goto('/#today')

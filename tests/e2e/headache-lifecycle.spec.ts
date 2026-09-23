@@ -20,7 +20,31 @@ test.describe('headache lifecycle', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Glad it’s over.' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Undo' })).toBeVisible()
 
+    await page.getByRole('link', { name: 'Settings' }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible()
+    await page.getByRole('button', { name: 'Light' }).click()
+    await page.getByRole('link', { name: 'Back to Today' }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Glad it’s over.' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Undo' })).toBeVisible()
+    await page.reload()
+    await expect(page.getByRole('heading', { level: 1, name: 'Glad it’s over.' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Undo' })).toBeVisible()
+
     await page.getByRole('button', { name: 'Undo' }).click()
     await expect(page.getByRole('heading', { level: 2, name: 'Headache ongoing' })).toBeVisible()
+  })
+
+  test('clears a pending Undo when another diary setting changes', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('link', { name: 'Start a headache' }).click()
+    await page.getByRole('button', { name: 'Save headache' }).click()
+    await page.getByRole('button', { name: 'End headache now' }).click()
+    await expect(page.getByRole('button', { name: 'Undo' })).toBeVisible()
+
+    await page.getByRole('link', { name: 'Settings' }).click()
+    await page.getByRole('button', { name: 'Words' }).click()
+    await page.getByRole('link', { name: 'Back to Today' }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Glad it’s over.' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Undo' })).toHaveCount(0)
   })
 })

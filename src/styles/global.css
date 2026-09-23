@@ -1875,49 +1875,45 @@ h2 {
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --color-page: #1c1916;
-    --color-surface: #282320;
-    --color-sand: #342d28;
-    --color-border: #3f3731;
-    --color-text: #f3ece3;
-    --color-muted: #bdb1a4;
-    --color-accent: #e3a07f;
-    --color-accent-pressed: #f0b99b;
-    --color-accent-text: #edb08f;
-    --color-accent-tint: #3b2a22;
-    --color-accent-tint-text: #e6cbbb;
-    --color-on-accent: #282320;
-    --color-sage-text: #a9c399;
-    --color-sage-tint: #2d382a;
-    --color-sage-fill: #8aa27e;
-    --color-outline: #b4a494;
-    --color-dashed-outline: #b4a494;
-    --color-switch-off: #6f6258;
-    --color-undo-background: #f3ece3;
-    --color-undo-text: #282320;
-    --color-undo-action: #8e4a30;
-  }
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-page: #1c1916;
+  --color-surface: #282320;
+  --color-sand: #342d28;
+  --color-border: #3f3731;
+  --color-text: #f3ece3;
+  --color-muted: #bdb1a4;
+  --color-accent: #e3a07f;
+  --color-accent-pressed: #f0b99b;
+  --color-accent-text: #edb08f;
+  --color-accent-tint: #3b2a22;
+  --color-accent-tint-text: #e6cbbb;
+  --color-on-accent: #282320;
+  --color-sage-text: #a9c399;
+  --color-sage-tint: #2d382a;
+  --color-sage-fill: #8aa27e;
+  --color-outline: #b4a494;
+  --color-dashed-outline: #b4a494;
+  --color-switch-off: #6f6258;
+  --color-undo-background: #f3ece3;
+  --color-undo-text: #282320;
+  --color-undo-action: #8e4a30;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root,
-  body {
-    color: #f3ece3;
-    background: #1c1916;
-  }
+:root[data-theme='dark'],
+:root[data-theme='dark'] body {
+  color: #f3ece3;
+  background: #1c1916;
+}
 
-  .eyebrow,
-  .empty-card p:last-child {
-    color: #bdb1a4;
-  }
+:root[data-theme='dark'] .eyebrow,
+:root[data-theme='dark'] .empty-card p:last-child {
+  color: #bdb1a4;
+}
 
-  .empty-card {
-    border-color: #3f3731;
-    background: #282320;
-  }
+:root[data-theme='dark'] .empty-card {
+  border-color: #3f3731;
+  background: #282320;
 }
 
 @media (prefers-reduced-motion: reduce) {
