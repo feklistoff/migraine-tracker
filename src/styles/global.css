@@ -866,7 +866,7 @@ h2 {
 }
 
 .segmented-control button {
-  min-height: 38px;
+  min-height: 44px;
   padding: 6px 12px;
   border: 0;
   border-radius: 11px;
@@ -984,6 +984,7 @@ h2 {
 }
 
 .settings-row-action {
+  min-height: 44px;
   padding: 8px 4px;
   font-size: 0.85rem;
 }
@@ -1916,5 +1917,16 @@ h2 {
   .empty-card {
     border-color: #3f3731;
     background: #282320;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0s !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0s !important;
   }
 }
