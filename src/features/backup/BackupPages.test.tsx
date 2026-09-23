@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { App } from '../../app/App'
 import { deleteDiaryDatabase } from '../../data/db'
 import { DiaryRepository } from '../../data/repository'
+import { getUpdateBlockers } from '../../pwa/updateSafety'
 import { fixtureClock } from '../../test/fixtures'
 
 const databaseName = 'backup-pages-test'
@@ -52,5 +53,41 @@ describe('backup and restore pages', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Replace with this backup' }))
     expect(confirm).toHaveBeenCalledOnce()
     expect(screen.getByText('Complete diary backup')).toBeInTheDocument()
+  })
+
+  it('blocks app updates for the full diary replacement', async () => {
+    repository = new DiaryRepository({ databaseName, clock: fixtureClock })
+    await repository.open()
+    const { createBackup } = await import('../../data/backup/export')
+    const backup = await createBackup(repository, '0.1.0')
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    window.location.hash = '#restore'
+    render(<App repository={repository} />)
+
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'Restore' })).toBeInTheDocument())
+    const file = new File([backup.text], backup.fileName, { type: 'application/json' })
+    Object.defineProperty(file, 'text', { value: () => Promise.resolve(backup.text) })
+    fireEvent.change(screen.getByLabelText('Choose backup file'), { target: { files: [file] } })
+    await waitFor(() => expect(screen.getByText('Complete diary backup')).toBeInTheDocument())
+
+    const read = repository.read.bind(repository)
+    let refreshPending = false
+    let continueRefresh: () => void = () => {}
+    vi.spyOn(repository, 'read').mockImplementation(async () => {
+      refreshPending = true
+      await new Promise<void>((resolve) => { continueRefresh = resolve })
+      return read()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Replace with this backup' }))
+    try {
+      await waitFor(() => {
+        expect(refreshPending).toBe(true)
+        expect(getUpdateBlockers()).toContain('Replacing diary from backup')
+      })
+    } finally {
+      continueRefresh()
+    }
+    await waitFor(() => expect(screen.getByText('Diary restored')).toBeInTheDocument())
+    expect(getUpdateBlockers()).not.toContain('Replacing diary from backup')
   })
 })

@@ -5,6 +5,7 @@ import { routeHref, type AppRoute } from '../../app/Router'
 import { MAX_BACKUP_BYTES } from '../../data/backup/validate'
 import { prepareRestore, restoreBackup, type RestorePreview } from '../../data/backup/restore'
 import { StaleRevisionError, type DiaryRepository } from '../../data/repository'
+import { beginCriticalOperation } from '../../pwa/updateSafety'
 import './backup.css'
 
 type RestoreRoute = Extract<AppRoute, { kind: 'page'; page: 'restore' }>
@@ -46,7 +47,9 @@ export function RestorePage({ route, repository }: { route: RestoreRoute; reposi
     setBusy(true)
     setError(null)
     try {
-      await restoreBackup(repository, preview)
+      await restoreBackup(repository, preview, {
+        beginCriticalOperation: () => beginCriticalOperation('Replacing diary from backup'),
+      })
       setPreview(null)
       setRestored(true)
     } catch (cause) {
