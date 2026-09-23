@@ -43,7 +43,7 @@ export function RestorePage({ route, repository }: { route: RestoreRoute; reposi
 
   const replace = async () => {
     if (!preview || busy) return
-    if (!window.confirm('Replace every record and setting on this device with this backup? This cannot be undone.')) return
+    if (!window.confirm('Replace every record and setting on this device with this backup? This cannot be undone. Other open app tabs will reload.')) return
     setBusy(true)
     setError(null)
     try {

@@ -6,18 +6,31 @@ const CACHE_NAME = __CACHE_NAME__
 const CACHE_PREFIX = `headache-diary-shell:${BASE_PATH}:`
 const BASE_URL = new URL(BASE_PATH, self.location.origin).href
 
+async function pruneOldCachesIfNoClients(preservePendingWorker = true) {
+  const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+  if (windows.some((client) => client.url.startsWith(BASE_URL))) return
+  // A pending worker owns a cache it will need after its install completes.
+  // Let its activate handler prune against its own CACHE_NAME instead.
+  if (preservePendingWorker && (self.registration.installing || self.registration.waiting)) return
+  const keys = await caches.keys()
+  await Promise.all(keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map((key) => caches.delete(key)))
+}
+
+async function requestOldCachePrune() {
+  // pagehide fires before a tab is removed from clients.matchAll(). Give the
+  // browser a moment to finish closing it and any sibling tabs.
+  await new Promise((resolve) => setTimeout(resolve, 300))
+  await pruneOldCachesIfNoClients()
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE)))
 })
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
-    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
     // Keep old hashed assets while any tab could still be running an older bundle.
-    if (windows.filter((client) => client.url.startsWith(BASE_URL)).length === 0) {
-      const keys = await caches.keys()
-      await Promise.all(keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME).map((key) => caches.delete(key)))
-    }
+    await pruneOldCachesIfNoClients(false)
     await self.clients.claim()
   })())
 })
@@ -61,12 +74,17 @@ function askClient(client) {
 }
 
 self.addEventListener('message', (event) => {
+  if (event.data?.type === 'CLIENT_CLOSING') {
+    event.waitUntil(requestOldCachePrune())
+    return
+  }
   if (event.data?.type !== 'APPLY_UPDATE' || !event.ports?.[0]) return
   event.waitUntil((async () => {
     const clients = (await self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
       .filter((client) => client.url.startsWith(BASE_URL))
     const replies = await Promise.all(clients.map(askClient))
     if (replies.some((canActivate) => !canActivate)) {
+      clients.forEach((client) => client.postMessage({ type: 'UPDATE_ABORTED' }))
       event.ports[0].postMessage({ applied: false, reason: 'Finish open forms and diary changes in every app tab, then try again.' })
       return
     }

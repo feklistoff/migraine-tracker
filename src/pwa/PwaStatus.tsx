@@ -35,7 +35,8 @@ export function PwaStatus() {
   const [blockers, setBlockers] = useState(getUpdateBlockers)
   const [applying, setApplying] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
-  const applyRequested = useRef(false)
+  const [reloadAfterActivation, setReloadAfterActivation] = useState(false)
+  const reloadAfterActivationRequested = useRef(false)
 
   useEffect(() => subscribeUpdateBlockers(() => setBlockers(getUpdateBlockers())), [])
 
@@ -54,18 +55,28 @@ export function PwaStatus() {
     const onVisibility = () => {
       if (document.visibilityState === 'visible') void current?.update().catch(() => undefined)
     }
+    const onPageHide = () => {
+      navigator.serviceWorker.controller?.postMessage({ type: 'CLIENT_CLOSING' })
+    }
     const onCanActivate = (event: MessageEvent) => {
       if (event.data?.type === 'CAN_ACTIVATE_UPDATE') {
-        event.ports[0]?.postMessage({ canActivate: getUpdateBlockers().length === 0 })
+        const canActivate = getUpdateBlockers().length === 0
+        if (canActivate) reloadAfterActivationRequested.current = true
+        event.ports[0]?.postMessage({ canActivate })
       }
+    }
+    const onUpdateAborted = (event: MessageEvent) => {
+      if (event.data?.type === 'UPDATE_ABORTED') reloadAfterActivationRequested.current = false
     }
     const onControllerChange = () => {
       setWaiting(null)
-      if (applyRequested.current && getUpdateBlockers().length === 0) window.location.reload()
+      if (reloadAfterActivationRequested.current) setReloadAfterActivation(true)
     }
     navigator.serviceWorker.addEventListener('message', onCanActivate)
+    navigator.serviceWorker.addEventListener('message', onUpdateAborted)
     navigator.serviceWorker.addEventListener('controllerchange', onControllerChange)
     document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('pagehide', onPageHide)
     void navigator.serviceWorker.register(`${scope}sw.js`, { scope, updateViaCache: 'none' })
       .then((next) => {
         if (cancelled) return
@@ -81,19 +92,24 @@ export function PwaStatus() {
       cancelled = true
       current?.removeEventListener('updatefound', onUpdateFound)
       document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('pagehide', onPageHide)
       navigator.serviceWorker.removeEventListener('message', onCanActivate)
+      navigator.serviceWorker.removeEventListener('message', onUpdateAborted)
       navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange)
     }
   }, [])
 
+  useEffect(() => {
+    if (reloadAfterActivation && blockers.length === 0) window.location.reload()
+  }, [reloadAfterActivation, blockers.length])
+
   const apply = async () => {
     if (!waiting || blockers.length || applying) return
-    applyRequested.current = true
     setApplying(true)
     setMessage(null)
     const result = await askWaitingWorker(waiting)
     if (!result.applied) {
-      applyRequested.current = false
+      reloadAfterActivationRequested.current = false
       setApplying(false)
       setMessage(result.reason ?? 'The update is still waiting. Try again after finishing your work.')
     }

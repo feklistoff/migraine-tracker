@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+
 import { StartHeadachePage } from '../features/episodes/StartHeadachePage'
 import { PastHeadachePage } from '../features/episodes/PastHeadachePage'
 import { ReadingPage } from '../features/episodes/ReadingPage'
@@ -15,6 +17,7 @@ import { defaultDiaryRepository, useDiaryRepository } from './useDiary'
 import { useAppRoute, type AppRoute } from './Router'
 import type { DiaryRepository } from '../data/repository'
 import type { DiaryFacts } from '../domain/types'
+import { subscribeToOtherTabRestores } from '../data/tabSync'
 
 function DiaryLoading() {
   return (
@@ -97,6 +100,8 @@ export interface AppProps {
 export function App({ repository = defaultDiaryRepository }: AppProps = {}) {
   const route = useAppRoute()
   const snapshot = useDiaryRepository(repository)
+
+  useEffect(() => subscribeToOtherTabRestores(() => window.location.reload()), [])
 
   if (snapshot.status === 'loading' || snapshot.status === 'idle') return <DiaryLoading />
   if (snapshot.status === 'error' || !snapshot.facts) return <DiaryError repository={repository} error={snapshot.error} />

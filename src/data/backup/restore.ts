@@ -1,6 +1,7 @@
 import type { DiaryFacts } from '../../domain/types'
 import { diaryTables, StaleRevisionError, type DiaryRepository } from '../repository'
 import { SINGLETON_KEY } from '../migrations'
+import { notifyOtherTabsOfRestore } from '../tabSync'
 import { backupCounts, compareBackupFacts, type BackupCounts, type BackupDifference } from './diff'
 import type { BackupEnvelope } from './schema'
 import { validateBackupText } from './validate'
@@ -69,6 +70,7 @@ export async function restoreBackup(repository: DiaryRepository, preview: Restor
       })
       options.beforeCommit?.()
     })
+    notifyOtherTabsOfRestore()
     return await repository.read()
   } finally {
     endCriticalOperation()
