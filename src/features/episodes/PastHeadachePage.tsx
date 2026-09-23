@@ -18,7 +18,9 @@ import {
 } from '../../domain/time'
 import type { DiaryFacts, Dose, Episode, Impact, Pain, RecordedTime, SavedMedicine } from '../../domain/types'
 import { EntryShell } from '../../app/AppShell'
+import { formatCivilDay } from '../../app/locale'
 import { routeHref, type AppRoute } from '../../app/Router'
+import { isValidCivilDay } from '../../domain/calendar'
 import { EventTimeField, useEventTimeInput } from './eventTimeInput'
 
 const CUSTOM_MEDICINE = 'custom'
@@ -367,6 +369,9 @@ export function PastHeadachePage({ facts, repository, route }: PastHeadachePageP
         <section className="form-card" aria-labelledby="past-times-heading">
           <p className="section-kicker">When</p>
           <h2 id="past-times-heading">When did it happen?</h2>
+          {!episode && route.tab === 'history' && route.selectedDay && isValidCivilDay(route.selectedDay) ? (
+            <p className="card-caption">From History: {formatCivilDay(route.selectedDay)}. Choose the actual start and end times.</p>
+          ) : null}
           <EventTimeField
             id="past-start-time"
             label="Started · date and time"

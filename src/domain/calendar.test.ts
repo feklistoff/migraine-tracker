@@ -5,7 +5,9 @@ import type { DailyRecord, Dose, Episode, Reading } from './types'
 import {
   classifyDay,
   dayBeforeSummary,
+  episodesForDay,
   headacheEvidenceDays,
+  selectCalendarMonth,
 } from './calendar'
 
 const audit = {
@@ -104,5 +106,49 @@ describe('calendar selectors', () => {
     expect(dayBeforeSummary(dailyRecord({ alcohol: false, sleep: 'not_enough', stress: true }))).toBe(
       'No alcohol · Not enough sleep · Stressful',
     )
+  })
+
+  it('[R-04.1] counts past days, excludes unrecorded today and future days, and lists missing dates', () => {
+    const facts = emptyDiaryFixture()
+    const now = fixtureEventTime('2024-09-18T14:05')
+    facts.episodes = [episode({ start: fixtureEventTime('2024-09-03T10:00'), state: 'ended', end: fixtureEventTime('2024-09-03T12:00') })]
+    facts.dailyRecords = [
+      dailyRecord({ day: '2024-09-04', headacheFreeAt: fixtureEventTime('2024-09-04T20:00') }),
+      dailyRecord({ day: '2024-09-05', sleep: 'fair_amount' }),
+    ]
+
+    const month = selectCalendarMonth(facts, '2024-09', now, 1)
+    expect(month.leadingBlankCount).toBe(6)
+    expect(month.days).toHaveLength(30)
+    expect(month.coverage).toMatchObject({ eligibleDays: 17, recordedDays: 2, headacheDays: 1, headacheFreeDays: 1 })
+    expect(month.coverage.missingDays).toHaveLength(15)
+    expect(month.coverage.missingDays).toContain('2024-09-05')
+    expect(month.coverage.missingDays).not.toContain('2024-09-18')
+    expect(month.days[17]).toMatchObject({ day: '2024-09-18', status: 'unknown', isToday: true, isFuture: false, eligible: false })
+    expect(month.days[18]).toMatchObject({ day: '2024-09-19', isFuture: true, eligible: false })
+
+    facts.dailyRecords.push(dailyRecord({ day: '2024-09-18', headacheFreeAt: now }))
+    expect(selectCalendarMonth(facts, '2024-09', now).coverage).toMatchObject({ eligibleDays: 18, recordedDays: 3 })
+    expect(selectCalendarMonth(facts, '2024-08', now).coverage.eligibleDays).toBe(31)
+    expect(selectCalendarMonth(facts, '2024-10', now).coverage.eligibleDays).toBe(0)
+  })
+
+  it('[R-02.5/R-02.6] lists every episode touching a day without adding a midnight end or unknown gap', () => {
+    const facts = emptyDiaryFixture()
+    const now = fixtureEventTime('2024-09-18T14:05')
+    facts.episodes = [
+      episode({ id: 'carry', start: fixtureEventTime('2024-08-31T23:00'), state: 'ended', end: fixtureEventTime('2024-09-02T00:00') }),
+      episode({ id: 'same-day', start: fixtureEventTime('2024-09-01T12:00'), state: 'ended', end: fixtureEventTime('2024-09-01T13:00') }),
+      episode({ id: 'unknown', start: fixtureEventTime('2024-09-03T12:00'), state: 'end_unknown', end: null }),
+    ]
+    facts.readings = [reading({ id: 'unknown-reading', episodeId: 'unknown', measuredAt: fixtureEventTime('2024-09-05T10:00') })]
+
+    expect(episodesForDay(facts, '2024-09-01', now).map(({ episode: item, relation }) => [item.id, relation])).toEqual([
+      ['carry', 'continued'],
+      ['same-day', 'began'],
+    ])
+    expect(episodesForDay(facts, '2024-09-02', now)).toEqual([])
+    expect(episodesForDay(facts, '2024-09-04', now)).toEqual([])
+    expect(episodesForDay(facts, '2024-09-05', now).map(({ relation }) => relation)).toEqual(['recorded'])
   })
 })
