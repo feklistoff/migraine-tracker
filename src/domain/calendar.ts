@@ -5,6 +5,31 @@ import type { CivilDay, DailyRecord, DiaryFacts, Episode, Pain, RecordedTime } f
 
 export type DiaryDayStatus = 'headache' | 'headache-free' | 'unknown'
 
+export interface CalendarDay {
+  day: CivilDay
+  status: DiaryDayStatus
+  isToday: boolean
+  isFuture: boolean
+  eligible: boolean
+}
+
+export interface MonthCoverage {
+  eligibleDays: number
+  recordedDays: number
+  headacheDays: number
+  headacheFreeDays: number
+  missingDays: CivilDay[]
+}
+
+export interface CalendarMonth {
+  month: string
+  leadingBlankCount: number
+  days: CalendarDay[]
+  coverage: MonthCoverage
+}
+
+export type EpisodeDayRelation = 'began' | 'continued' | 'recorded'
+
 /**
  * A positive reading is evidence of a headache day. Zero and verbal "none"
  * remain observations, but do not prove that the day contained a headache.
@@ -58,6 +83,78 @@ export function isValidCivilDay(day: string): boolean {
 export function classifyDay(facts: DiaryFacts, day: CivilDay, now: RecordedTime): DiaryDayStatus {
   if (headacheEvidenceDays(facts, now).has(day)) return 'headache'
   return dailyRecordForDay(facts, day)?.headacheFreeAt ? 'headache-free' : 'unknown'
+}
+
+/**
+ * One month contract for History, Today summaries and Statistics. Day-before
+ * answers do not change status. Today enters the denominator only after its
+ * headache status has been recorded (R-04.1).
+ */
+export function selectCalendarMonth(
+  facts: DiaryFacts,
+  month: string,
+  now: RecordedTime,
+  firstWeekday = 1,
+): CalendarMonth {
+  const yearMonth = Temporal.PlainYearMonth.from(month)
+  if (!Number.isInteger(firstWeekday) || firstWeekday < 1 || firstWeekday > 7) {
+    throw new RangeError('First weekday must be an ISO weekday from 1 to 7.')
+  }
+  const first = yearMonth.toPlainDate({ day: 1 })
+  const today = civilDay(now)
+  const headacheDays = headacheEvidenceDays(facts, now)
+  const confirmedDays = new Set(facts.dailyRecords.filter((record) => record.headacheFreeAt !== null).map((record) => record.day))
+  const days: CalendarDay[] = []
+  const missingDays: CivilDay[] = []
+  let recordedDays = 0
+  let countedHeadacheDays = 0
+  let headacheFreeDays = 0
+  let eligibleDays = 0
+
+  for (let date = first; date.month === yearMonth.month; date = date.add({ days: 1 })) {
+    const day = date.toString()
+    const status: DiaryDayStatus = headacheDays.has(day) ? 'headache' : confirmedDays.has(day) ? 'headache-free' : 'unknown'
+    const isToday = day === today
+    const isFuture = day > today
+    const eligible = day < today || (isToday && status !== 'unknown')
+    days.push({ day, status, isToday, isFuture, eligible })
+    if (!eligible) continue
+    eligibleDays += 1
+    if (status === 'headache') {
+      recordedDays += 1
+      countedHeadacheDays += 1
+    } else if (status === 'headache-free') {
+      recordedDays += 1
+      headacheFreeDays += 1
+    } else {
+      missingDays.push(day)
+    }
+  }
+
+  return {
+    month: yearMonth.toString(),
+    leadingBlankCount: (first.dayOfWeek - firstWeekday + 7) % 7,
+    days,
+    coverage: { eligibleDays, recordedDays, headacheDays: countedHeadacheDays, headacheFreeDays, missingDays },
+  }
+}
+
+/** A selected day can contain several episodes, including one begun earlier. */
+export function episodesForDay(
+  facts: DiaryFacts,
+  day: CivilDay,
+  now: RecordedTime,
+): { episode: Episode; relation: EpisodeDayRelation }[] {
+  return facts.episodes.flatMap((episode) => {
+    const began = civilDay(episode.start) === day
+    const intervalDay = episodeEvidenceDays(episode, now).includes(day)
+    const readingDay = facts.readings.some((reading) =>
+      reading.episodeId === episode.id && isPositivePain(reading.pain) && civilDay(reading.measuredAt) === day)
+    const doseDay = facts.doses.some((dose) => dose.episodeId === episode.id && civilDay(dose.takenAt) === day)
+    if (!intervalDay && !readingDay && !doseDay) return []
+    const relation: EpisodeDayRelation = began ? 'began' : intervalDay ? 'continued' : 'recorded'
+    return [{ episode, relation }]
+  }).sort((one, two) => compareInstants(one.episode.start, two.episode.start) || one.episode.id.localeCompare(two.episode.id))
 }
 
 /**
