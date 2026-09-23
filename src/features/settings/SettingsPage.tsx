@@ -7,6 +7,7 @@ import type { DiaryFacts, SavedMedicine } from '../../domain/types'
 import { AppShell, PageHeader } from '../../app/AppShell'
 import { routeHref, type AppRoute } from '../../app/Router'
 import { appVersion, buildLabel } from '../../app/buildInfo'
+import type { AppearancePreference } from '../../app/appearance'
 import { useUpdateBlocker } from '../../pwa/useUpdateBlocker'
 import { InstallationGuidance } from '../../pwa/PwaStatus'
 
@@ -16,6 +17,8 @@ interface SettingsPageProps {
   route: SettingsRoute
   facts: DiaryFacts
   repository: DiaryRepository
+  appearance: AppearancePreference
+  onAppearanceChange: (preference: AppearancePreference) => void
 }
 
 type WriteOperation = (facts: DiaryFacts) => Promise<unknown>
@@ -45,7 +48,7 @@ function SettingsSection({
   )
 }
 
-export function SettingsPage({ route, facts, repository }: SettingsPageProps) {
+export function SettingsPage({ route, facts, repository, appearance, onAppearanceChange }: SettingsPageProps) {
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | undefined>()
   const [medicineName, setMedicineName] = useState('')
@@ -187,6 +190,21 @@ export function SettingsPage({ route, facts, repository }: SettingsPageProps) {
       <div className="settings-page">
         {error ? <p className="form-error" role="alert">{error}</p> : null}
         <InstallationGuidance />
+
+        <SettingsSection title="Appearance" caption="System follows this iPhone’s display setting. This preference stays on this device.">
+          <div className="segmented-control settings-segmented" role="group" aria-label="Appearance">
+            {(['system', 'light', 'dark'] as const).map((preference) => (
+              <button
+                key={preference}
+                type="button"
+                aria-pressed={appearance === preference}
+                onClick={() => onAppearanceChange(preference)}
+              >
+                {preference === 'system' ? 'System' : preference === 'light' ? 'Light' : 'Dark'}
+              </button>
+            ))}
+          </div>
+        </SettingsSection>
 
         <SettingsSection title="Pain entry" caption="Used by default. You can still switch while entering.">
           <div className="segmented-control settings-segmented" role="group" aria-label="Pain entry default">

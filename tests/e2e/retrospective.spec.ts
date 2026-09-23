@@ -96,6 +96,7 @@ test.describe('retrospective headache logging', () => {
     await expect(page.getByText('Length unknown')).toBeVisible()
     await page.getByRole('link', { name: 'Back to Today' }).click()
     await expect(page.getByText('End time not recorded')).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Settings' })).toBeVisible()
     await expect(page.getByRole('heading', { level: 2, name: 'Headache ongoing' })).toHaveCount(0)
 
     await page.getByRole('link', { name: 'View headache timeline' }).click()

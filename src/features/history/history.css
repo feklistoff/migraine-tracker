@@ -13,7 +13,7 @@
 .history-calendar { display: grid; gap: 6px; }
 .history-calendar__weekdays, .history-calendar__days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
 .history-calendar__weekdays { color: var(--color-muted); font-size: 0.75rem; font-weight: 600; text-align: center; }
-.history-day { min-width: 0; height: 42px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; border: 1.5px solid transparent; border-radius: 12px; background: transparent; color: var(--color-text); cursor: pointer; }
+.history-day { min-width: 0; height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; border: 1.5px solid transparent; border-radius: 12px; background: transparent; color: var(--color-text); cursor: pointer; }
 .history-day small { height: 9px; font-size: 0.5rem; line-height: 1; }
 .history-day--headache { background: var(--color-accent-tint); color: var(--color-accent-text); font-weight: 700; }
 .history-day--headache small { color: var(--color-accent); }
@@ -28,12 +28,12 @@
 .history-coverage { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 12px 14px; border-radius: 16px; background: var(--color-sage-tint); }
 .history-coverage p { margin: 0; display: grid; gap: 2px; }
 .history-coverage small { color: var(--color-sage-text); }
-.history-coverage .text-action { min-height: 36px; }
+.history-coverage .text-action { min-height: 44px; }
 .history-missing { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--color-border); border-radius: 18px; background: var(--color-surface); }
 .history-missing h2 { font-size: 1.2rem; }
 .history-missing p { margin: 0; color: var(--color-muted); font-size: 0.85rem; }
 .history-missing__list { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
-.history-missing__list button { min-height: 40px; border: 1px solid var(--color-dashed-outline); border-radius: 10px; background: transparent; color: var(--color-text); cursor: pointer; }
+.history-missing__list button { min-height: 44px; border: 1px solid var(--color-dashed-outline); border-radius: 10px; background: transparent; color: var(--color-text); cursor: pointer; }
 
 .history-selected { display: grid; gap: 10px; padding-top: 4px; }
 .history-selected h2 { font-size: 1.25rem; }

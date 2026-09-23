@@ -40,3 +40,35 @@ test('persists settings and manages saved medicines through reload', async ({ pa
   await page.getByRole('button', { name: 'Restore Ibuprofen' }).click()
   await expect(page.getByRole('button', { name: 'Make Ibuprofen the default' })).toBeVisible()
 })
+
+test('lets the user choose and keep a system, light, or dark appearance', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await page.goto('/')
+  await page.getByRole('link', { name: 'Settings' }).click()
+
+  const system = page.getByRole('button', { name: 'System' })
+  const light = page.getByRole('button', { name: 'Light' })
+  const dark = page.getByRole('button', { name: 'Dark' })
+  await expect(system).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(28, 25, 22)')
+
+  await light.click()
+  await expect(light).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(245, 239, 231)')
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Light' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(245, 239, 231)')
+
+  await page.emulateMedia({ colorScheme: 'light' })
+  await dark.click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(28, 25, 22)')
+
+  await system.click()
+  await expect(system).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(245, 239, 231)')
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(28, 25, 22)')
+})
