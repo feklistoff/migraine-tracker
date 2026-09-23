@@ -4,6 +4,7 @@ import { ReadingPage } from '../features/episodes/ReadingPage'
 import { DosePage } from '../features/episodes/DosePage'
 import { TimelinePage } from '../features/episodes/TimelinePage'
 import { CheckinPage } from '../features/checkins/CheckinPage'
+import { HistoryPage } from '../features/history/HistoryPage'
 import { SettingsPage } from '../features/settings/SettingsPage'
 import { TodayPage } from '../features/today/TodayPage'
 import { AppShell, PageHeader } from './AppShell'
@@ -63,7 +64,7 @@ function RoutedApp({ route, repository, facts }: { route: AppRoute; repository: 
     return <TodayPage route={route} facts={facts} repository={repository} />
   }
   if (route.kind === 'tab' && route.tab === 'history') {
-    return <PlaceholderPage route={route} title="History" description="Recorded headaches will appear here once the calendar is connected." />
+    return <HistoryPage route={route} facts={facts} repository={repository} />
   }
   if (route.kind === 'tab' && route.tab === 'statistics') {
     return <PlaceholderPage route={route} title="Statistics" description="Your recorded days and observations will be summarised here." />
