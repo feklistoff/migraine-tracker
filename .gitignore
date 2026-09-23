@@ -1,15 +1,42 @@
+# Dependencies and build output
 node_modules/
-.worktrees/
 .pnpm-store/
 dist/
 .vite/
+*.tsbuildinfo
+.eslintcache
+
+# Test output
 coverage/
 playwright-report/
 test-results/
+blob-report/
+playwright/.cache/
+
+# Local-only working notes, plans, mockups and agent state
 docs/
+.worktrees/
+.claude/settings.local.json
+
+# Editor / OS
 .DS_Store
-*.backup.json
-*.health-data.json
+.idea/
+*.swp
+*.log
+
+# Secrets
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+*.p12
+
+# Real diary data and device captures must never be committed
+*.backup.json
+*.health-data.json
+headache-diary-*.json
+IMG_*
+Screenshot*
+*.heic
+*.HEIC

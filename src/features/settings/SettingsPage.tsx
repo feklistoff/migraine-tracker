@@ -7,6 +7,8 @@ import type { DiaryFacts, SavedMedicine } from '../../domain/types'
 import { AppShell, PageHeader } from '../../app/AppShell'
 import { routeHref, type AppRoute } from '../../app/Router'
 import { appVersion, buildLabel } from '../../app/buildInfo'
+import { useUpdateBlocker } from '../../pwa/useUpdateBlocker'
+import { InstallationGuidance } from '../../pwa/PwaStatus'
 
 type SettingsRoute = Extract<AppRoute, { kind: 'page'; page: 'settings' }>
 
@@ -172,6 +174,7 @@ export function SettingsPage({ route, facts, repository }: SettingsPageProps) {
 
   const medicineEditorDirty =
     editorOpen && (medicineName !== initialMedicineName || doseText !== initialDoseText)
+  useUpdateBlocker(editorOpen || pendingWrites > 0, 'Finish editing Settings before updating')
 
   return (
     <AppShell route={route}>
@@ -183,6 +186,7 @@ export function SettingsPage({ route, facts, repository }: SettingsPageProps) {
       />
       <div className="settings-page">
         {error ? <p className="form-error" role="alert">{error}</p> : null}
+        <InstallationGuidance />
 
         <SettingsSection title="Pain entry" caption="Used by default. You can still switch while entering.">
           <div className="segmented-control settings-segmented" role="group" aria-label="Pain entry default">
@@ -330,6 +334,19 @@ export function SettingsPage({ route, facts, repository }: SettingsPageProps) {
                 </div>
               </div>
             ) : null}
+          </div>
+        </SettingsSection>
+
+        <SettingsSection title="Your data" caption="Your diary is stored only on this device — no account, no cloud. The app can’t tell whether a backup file was saved.">
+          <div className="settings-panel">
+            <a className="settings-data-link" href={routeHref({ kind: 'page', page: 'backup', tab: route.tab })}>
+              <strong>Make backup</strong>
+              <span>{facts.metadata.lastExportGeneratedAt ? `File made ${new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(facts.metadata.lastExportGeneratedAt))}` : 'No file made yet'}</span>
+            </a>
+            <a className="settings-data-link" href={routeHref({ kind: 'page', page: 'restore', tab: route.tab })}>
+              <strong>Restore from backup</strong>
+              <span>Review a file before replacing this diary</span>
+            </a>
           </div>
         </SettingsSection>
 

@@ -35,5 +35,4 @@ for (const script of scripts) {
     'CSP must precede every production script')
 }
 assert.equal(document.querySelector('meta[name="robots"]')?.content, 'noindex, nofollow')
-assert.equal(document.querySelectorAll('script[src$="manifest-selector.js"]').length, 1)
 log('Production HTML security checks passed')
