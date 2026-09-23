@@ -337,6 +337,19 @@ export function SettingsPage({ route, facts, repository }: SettingsPageProps) {
           </div>
         </SettingsSection>
 
+        <SettingsSection title="Your data" caption="Your diary is stored only on this device — no account, no cloud. The app can’t tell whether a backup file was saved.">
+          <div className="settings-panel">
+            <a className="settings-data-link" href={routeHref({ kind: 'page', page: 'backup', tab: route.tab })}>
+              <strong>Make backup</strong>
+              <span>{facts.metadata.lastExportGeneratedAt ? `File made ${new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(facts.metadata.lastExportGeneratedAt))}` : 'No file made yet'}</span>
+            </a>
+            <a className="settings-data-link" href={routeHref({ kind: 'page', page: 'restore', tab: route.tab })}>
+              <strong>Restore from backup</strong>
+              <span>Review a file before replacing this diary</span>
+            </a>
+          </div>
+        </SettingsSection>
+
         <SettingsSection title="Device diagnostics" caption="Useful when checking an installation on your iPhone.">
           <div className="settings-panel settings-meta" aria-label="App version and build">
             <div><span>App version</span><strong>{appVersion}</strong></div>

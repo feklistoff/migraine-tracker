@@ -6,8 +6,8 @@ export type EntryPageId = 'start' | 'past' | 'checkin' | 'update' | 'follow-up' 
 type RouteContext = { selectedDay?: string; episodeId?: string; doseId?: string; readingId?: string; missing?: boolean }
 type TabRoute = { [T in TabId]: { kind: 'tab'; tab: T } & RouteContext }[TabId]
 type PageRoute = {
-  [P in 'settings' | 'timeline']: { kind: 'page'; page: P; tab: TabId } & RouteContext
-}['settings' | 'timeline']
+  [P in 'settings' | 'timeline' | 'backup' | 'restore']: { kind: 'page'; page: P; tab: TabId } & RouteContext
+}['settings' | 'timeline' | 'backup' | 'restore']
 type EntryRoute = { [P in EntryPageId]: { kind: 'entry'; page: P; tab: TabId } & RouteContext }[EntryPageId]
 
 export type AppRoute = TabRoute | PageRoute | EntryRoute
@@ -44,7 +44,7 @@ export function parseRoute(hash: string): AppRoute {
   if (route === 'history' || route === 'statistics') {
     return { kind: 'tab', tab: route, ...(selectedDay ? { selectedDay } : {}), ...(episodeId ? { episodeId } : {}), ...(route === 'history' && query.get('missing') === '1' ? { missing: true } : {}) }
   }
-  if (route === 'settings' || route === 'timeline') {
+  if (route === 'settings' || route === 'timeline' || route === 'backup' || route === 'restore') {
     return {
       kind: 'page',
       page: route,
