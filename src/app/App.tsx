@@ -6,6 +6,8 @@ import { DosePage } from '../features/episodes/DosePage'
 import { TimelinePage } from '../features/episodes/TimelinePage'
 import { CheckinPage } from '../features/checkins/CheckinPage'
 import { SettingsPage } from '../features/settings/SettingsPage'
+import { MakeBackupPage } from '../features/backup/MakeBackupPage'
+import { RestorePage } from '../features/backup/RestorePage'
 import { TodayPage } from '../features/today/TodayPage'
 import { AppShell, PageHeader } from './AppShell'
 import { defaultDiaryRepository, useDiaryRepository } from './useDiary'
@@ -71,6 +73,12 @@ function RoutedApp({ route, repository, facts }: { route: AppRoute; repository: 
   }
   if (route.kind === 'page' && route.page === 'settings') {
     return <SettingsPage route={route} facts={facts} repository={repository} />
+  }
+  if (route.kind === 'page' && route.page === 'backup') {
+    return <MakeBackupPage route={route} repository={repository} />
+  }
+  if (route.kind === 'page' && route.page === 'restore') {
+    return <RestorePage route={route} repository={repository} />
   }
   if (route.kind === 'page' && route.page === 'timeline') {
     return <TimelinePage route={route} facts={facts} repository={repository} />

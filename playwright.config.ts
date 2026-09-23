@@ -16,7 +16,7 @@ export default defineConfig({
     ...devices['Desktop Chrome'],
   },
   webServer: {
-    command: `pnpm dev --host 127.0.0.1 --port ${port} --strictPort`,
+    command: `"${process.execPath}" node_modules/vite/bin/vite.js --host 127.0.0.1 --port ${port} --strictPort`,
     reuseExistingServer: false,
     url: appURL,
   },
