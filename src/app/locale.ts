@@ -18,7 +18,7 @@ export function deviceTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
 }
 
-function firstDayOfWeek(locale: string): number {
+export function firstDayOfWeek(locale: string): number {
   const weekInfo = (new Intl.Locale(locale) as LocaleWithWeekInfo).weekInfo
   const firstDay = weekInfo?.firstDay
   return firstDay && firstDay >= 1 && firstDay <= 7 ? firstDay : 1

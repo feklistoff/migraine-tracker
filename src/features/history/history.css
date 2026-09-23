@@ -1,0 +1,69 @@
+.history-page .diary-content { gap: 14px; }
+
+.history-month-header { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; padding-top: 18px; }
+.history-month-header h1 { text-align: center; font-size: clamp(1.35rem, 5vw, 1.75rem); }
+.history-month-header button { width: 44px; height: 44px; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface); color: var(--color-text); font-size: 1.8rem; line-height: 1; cursor: pointer; }
+
+.history-key { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px 16px; color: var(--color-muted); font-size: 0.8rem; }
+.history-key span { display: inline-flex; align-items: center; gap: 6px; }
+.history-key i { width: 10px; height: 10px; display: inline-grid; place-items: center; color: var(--color-sage-text); font-style: normal; font-weight: 700; }
+.history-key__dot { border-radius: 50%; background: var(--color-accent); }
+.history-key__empty { border: 1.5px dashed var(--color-dashed-outline); border-radius: 3px; }
+
+.history-calendar { display: grid; gap: 6px; }
+.history-calendar__weekdays, .history-calendar__days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.history-calendar__weekdays { color: var(--color-muted); font-size: 0.75rem; font-weight: 600; text-align: center; }
+.history-day { min-width: 0; height: 42px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; border: 1.5px solid transparent; border-radius: 12px; background: transparent; color: var(--color-text); cursor: pointer; }
+.history-day small { height: 9px; font-size: 0.5rem; line-height: 1; }
+.history-day--headache { background: var(--color-accent-tint); color: var(--color-accent-text); font-weight: 700; }
+.history-day--headache small { color: var(--color-accent); }
+.history-day--headache-free { background: var(--color-sage-tint); color: var(--color-sage-text); }
+.history-day--unknown:not(.history-day--today) { border-style: dashed; border-color: var(--color-dashed-outline); color: var(--color-muted); }
+.history-day--future { color: var(--color-muted); }
+.history-day--today { border: 2px solid var(--color-text); font-weight: 700; }
+.history-day--selected { background: var(--color-text); border-color: var(--color-text); color: var(--color-surface); }
+.history-day--selected small { color: var(--color-undo-action); }
+.history-day:focus-visible, .history-month-header button:focus-visible, .history-missing button:focus-visible, .history-coverage button:focus-visible, .history-episode__timeline:focus-visible, .history-day-before:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
+
+.history-coverage { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 12px 14px; border-radius: 16px; background: var(--color-sage-tint); }
+.history-coverage p { margin: 0; display: grid; gap: 2px; }
+.history-coverage small { color: var(--color-sage-text); }
+.history-coverage .text-action { min-height: 36px; }
+.history-missing { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--color-border); border-radius: 18px; background: var(--color-surface); }
+.history-missing h2 { font-size: 1.2rem; }
+.history-missing p { margin: 0; color: var(--color-muted); font-size: 0.85rem; }
+.history-missing__list { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.history-missing__list button { min-height: 40px; border: 1px solid var(--color-dashed-outline); border-radius: 10px; background: transparent; color: var(--color-text); cursor: pointer; }
+
+.history-selected { display: grid; gap: 10px; padding-top: 4px; }
+.history-selected h2 { font-size: 1.25rem; }
+.history-day-before { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 8px 14px; border-radius: 14px; background: var(--color-sand); color: var(--color-text); text-decoration: none; }
+.history-day-before span:first-child { display: grid; gap: 2px; }
+.history-day-before strong { color: var(--color-muted); font-size: 0.75rem; letter-spacing: 0.04em; text-transform: uppercase; }
+.history-day-before small { font-size: 0.88rem; }
+.history-day-before span:last-child { font-size: 1.5rem; }
+.history-episode { display: grid; gap: 8px; padding: 14px 16px; border: 1px solid var(--color-border); border-radius: 20px; background: var(--color-surface); }
+.history-episode__heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.history-episode__heading > div { display: grid; gap: 2px; }
+.history-episode__heading small { color: var(--color-muted); }
+.history-episode__timeline { width: 44px; height: 44px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 14px; background: var(--color-page); color: var(--color-text); font-size: 1.5rem; text-decoration: none; }
+.history-episode__time { margin: 0; color: var(--color-muted); font-size: 0.86rem; }
+.history-episode__details { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 6px 8px; margin: 0; font-size: 0.87rem; }
+.history-episode__details dt { color: var(--color-muted); }
+.history-episode__details dd { margin: 0; overflow-wrap: anywhere; }
+.history-free, .history-unknown, .history-today { display: grid; gap: 3px; padding: 14px 16px; border-radius: 20px; }
+.history-free { background: var(--color-sage-tint); }
+.history-free span { color: var(--color-sage-text); }
+.history-unknown { border: 1.5px dashed var(--color-dashed-outline); }
+.history-today { border: 1px solid var(--color-border); background: var(--color-surface); }
+.history-unknown span, .history-today span, .history-future { color: var(--color-muted); }
+.history-future { margin: 0; }
+.history-actions { display: grid; gap: 10px; }
+.history-actions--two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.history-actions > *, .history-add { min-width: 0; min-height: 48px; }
+.history-add { display: flex; align-items: center; justify-content: center; text-align: center; }
+
+@media (max-width: 350px) {
+  .history-calendar__weekdays, .history-calendar__days { gap: 3px; }
+  .history-key { gap: 6px 10px; }
+}

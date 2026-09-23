@@ -3,7 +3,7 @@ import { useSyncExternalStore } from 'react'
 export type TabId = 'today' | 'history' | 'statistics'
 export type EntryPageId = 'start' | 'past' | 'checkin' | 'update' | 'follow-up' | 'dose'
 
-type RouteContext = { selectedDay?: string; episodeId?: string; doseId?: string; readingId?: string }
+type RouteContext = { selectedDay?: string; episodeId?: string; doseId?: string; readingId?: string; missing?: boolean }
 type TabRoute = { [T in TabId]: { kind: 'tab'; tab: T } & RouteContext }[TabId]
 type PageRoute = {
   [P in 'settings' | 'timeline']: { kind: 'page'; page: P; tab: TabId } & RouteContext
@@ -22,6 +22,7 @@ export function routeHref(route: AppRoute): string {
   if (route.episodeId) query.set('episode', route.episodeId)
   if (route.doseId) query.set('dose', route.doseId)
   if (route.readingId) query.set('reading', route.readingId)
+  if (route.kind === 'tab' && route.tab === 'history' && route.missing) query.set('missing', '1')
   const queryString = query.toString()
   return `#${path}${queryString ? `?${queryString}` : ''}`
 }
@@ -41,7 +42,7 @@ export function parseRoute(hash: string): AppRoute {
   const tabQuery = query.get('tab')
 
   if (route === 'history' || route === 'statistics') {
-    return { kind: 'tab', tab: route, ...(selectedDay ? { selectedDay } : {}), ...(episodeId ? { episodeId } : {}) }
+    return { kind: 'tab', tab: route, ...(selectedDay ? { selectedDay } : {}), ...(episodeId ? { episodeId } : {}), ...(route === 'history' && query.get('missing') === '1' ? { missing: true } : {}) }
   }
   if (route === 'settings' || route === 'timeline') {
     return {

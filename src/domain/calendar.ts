@@ -145,13 +145,18 @@ export function episodesForDay(
   day: CivilDay,
   now: RecordedTime,
 ): { episode: Episode; relation: EpisodeDayRelation }[] {
+  const episodesWithEvent = new Set<string>()
+  for (const reading of facts.readings) {
+    if (isPositivePain(reading.pain) && civilDay(reading.measuredAt) === day) episodesWithEvent.add(reading.episodeId)
+  }
+  for (const dose of facts.doses) {
+    if (civilDay(dose.takenAt) === day) episodesWithEvent.add(dose.episodeId)
+  }
+
   return facts.episodes.flatMap((episode) => {
     const began = civilDay(episode.start) === day
     const intervalDay = episodeEvidenceDays(episode, now).includes(day)
-    const readingDay = facts.readings.some((reading) =>
-      reading.episodeId === episode.id && isPositivePain(reading.pain) && civilDay(reading.measuredAt) === day)
-    const doseDay = facts.doses.some((dose) => dose.episodeId === episode.id && civilDay(dose.takenAt) === day)
-    if (!intervalDay && !readingDay && !doseDay) return []
+    if (!intervalDay && !episodesWithEvent.has(episode.id)) return []
     const relation: EpisodeDayRelation = began ? 'began' : intervalDay ? 'continued' : 'recorded'
     return [{ episode, relation }]
   }).sort((one, two) => compareInstants(one.episode.start, two.episode.start) || one.episode.id.localeCompare(two.episode.id))
