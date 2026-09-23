@@ -12,6 +12,21 @@ afterEach(async () => {
 })
 
 describe('diary IndexedDB schema', () => {
+  it('reports a blocked upgrade instead of loading indefinitely', async () => {
+    const older = new Dexie(databaseName)
+    older.version(1).stores({ scratch: 'id' })
+    await older.open()
+    older.on('versionchange', () => false)
+
+    try {
+      await expect(openDiaryDatabase({ name: databaseName, clock: fixtureClock })).rejects.toThrow(
+        'Close other diary tabs',
+      )
+    } finally {
+      older.close()
+    }
+  })
+
   it('opens the supported versioned stores and indexes', async () => {
     const database = await openDiaryDatabase({ name: databaseName, clock: fixtureClock })
 

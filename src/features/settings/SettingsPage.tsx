@@ -7,6 +7,8 @@ import type { DiaryFacts, SavedMedicine } from '../../domain/types'
 import { AppShell, PageHeader } from '../../app/AppShell'
 import { routeHref, type AppRoute } from '../../app/Router'
 import { appVersion, buildLabel } from '../../app/buildInfo'
+import { useUpdateBlocker } from '../../pwa/useUpdateBlocker'
+import { InstallationGuidance } from '../../pwa/PwaStatus'
 
 type SettingsRoute = Extract<AppRoute, { kind: 'page'; page: 'settings' }>
 
@@ -172,6 +174,7 @@ export function SettingsPage({ route, facts, repository }: SettingsPageProps) {
 
   const medicineEditorDirty =
     editorOpen && (medicineName !== initialMedicineName || doseText !== initialDoseText)
+  useUpdateBlocker(editorOpen || pendingWrites > 0, 'Finish editing Settings before updating')
 
   return (
     <AppShell route={route}>
@@ -183,6 +186,7 @@ export function SettingsPage({ route, facts, repository }: SettingsPageProps) {
       />
       <div className="settings-page">
         {error ? <p className="form-error" role="alert">{error}</p> : null}
+        <InstallationGuidance />
 
         <SettingsSection title="Pain entry" caption="Used by default. You can still switch while entering.">
           <div className="segmented-control settings-segmented" role="group" aria-label="Pain entry default">

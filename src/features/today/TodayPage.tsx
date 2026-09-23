@@ -11,6 +11,7 @@ import { formatEventDate, formatEventTime } from '../../app/locale'
 import { AppShell } from '../../app/AppShell'
 import { routeHref, type AppRoute } from '../../app/Router'
 import { EventTimeField, useEventTimeInput } from '../episodes/eventTimeInput'
+import { useUpdateBlocker } from '../../pwa/useUpdateBlocker'
 
 interface TodayPageProps {
   route: Extract<AppRoute, { kind: 'tab' }> & { tab: 'today' }
@@ -257,6 +258,7 @@ interface EndEditorProps {
 }
 
 function EndEditor({ episode, repository, facts, onClose, onSaved, onError }: EndEditorProps) {
+  useUpdateBlocker(true, 'An end-time form is open')
   const endTimeZone = episode.end?.timeZone ?? episode.start.timeZone
   const initialEnd = episode.end ?? eventTimeFromInstant(repository.clock.now(), endTimeZone)
   const endTime = useEventTimeInput(initialEnd, endTimeZone)

@@ -43,6 +43,7 @@ import {
   type DiaryTables,
 } from './repository'
 import { readFactsFromTables } from './repository'
+import { beginCriticalOperation } from '../pwa/updateSafety'
 
 export interface CommandOptions {
   expectedRevision?: number
@@ -199,6 +200,7 @@ async function runAtomicWrite<T>(
   options: CommandOptions,
   write: (context: CommandContext) => Promise<WriteOperation<T>>,
 ): Promise<T> {
+  const finishWrite = beginCriticalOperation('Saving diary changes')
   let operationResult: T
   try {
     const database = await repository.getDatabase()
@@ -238,6 +240,7 @@ async function runAtomicWrite<T>(
     )
   } catch (error) {
     repository.notifyWriteFailure(error)
+    finishWrite()
     throw error
   }
 
@@ -250,6 +253,7 @@ async function runAtomicWrite<T>(
     // Keep the successful command result; the repository snapshot carries the
     // refresh error and lets the app offer its normal recovery path.
   }
+  finishWrite()
   return operationResult
 }
 

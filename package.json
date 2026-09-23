@@ -9,12 +9,13 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/check-production-html.mjs",
+    "build": "vite build && node scripts/build-service-worker.mjs && node scripts/check-production-html.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:pwa": "node scripts/test-pwa.mjs"
   },
   "dependencies": {
     "@fontsource-variable/figtree": "5.2.6",
