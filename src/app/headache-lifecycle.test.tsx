@@ -7,7 +7,7 @@ import { deleteDiaryDatabase } from '../data/db'
 import { DiaryRepository } from '../data/repository'
 import { fixedClock } from '../domain/time'
 import { fixtureEventTime } from '../test/fixtures'
-import { formatPickerTime } from '../components/DateTimeWheel'
+import { formatPickerTime } from '../components/DateTimePicker'
 
 const databaseName = 'headache-diary-lifecycle-tests'
 const clock = fixedClock('2024-09-18T14:05:00Z', 'Europe/Helsinki')
@@ -71,7 +71,7 @@ describe('headache lifecycle', () => {
     fireEvent.click(screen.getByRole('link', { name: 'Edit start' }))
     await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'New headache' })).toBeInTheDocument())
     fireEvent.click(screen.getByLabelText('Date and time'))
-    fireEvent.keyDown(screen.getByRole('spinbutton', { name: 'Hour' }), { key: 'ArrowUp' })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Time' }), { target: { value: '16:05' } })
     fireEvent.click(screen.getByRole('button', { name: 'Done' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save headache' }))
     await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: 'Headache ongoing' })).toBeInTheDocument())

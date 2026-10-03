@@ -10,13 +10,18 @@ export function eventTimeLabel(value: string) {
 export async function chooseEventTime(page: Page, label: string, value: string) {
   await page.getByLabel(label, { exact: true }).click()
   const dialog = page.getByRole('dialog', { name: label, exact: true })
-  const [year, month, day, hour, minute] = value.split(/[-T:]/).map(Number)
-  // Start with day 1 so changing month/year cannot constrain the desired day.
-  for (const [field, next] of [['Day', 1], ['Year', year], ['Month', month], ['Day', day], ['Hour', hour], ['Minute', minute]] as const) {
-    const wheel = dialog.getByRole('spinbutton', { name: field, exact: true })
-    await wheel.locator(`[data-value="${next}"]`).click()
-    await expect(wheel).toHaveAttribute('aria-valuenow', String(next))
+  const calendar = dialog.getByRole('group', { name: 'Calendar days' })
+  const [year, month, day] = value.split(/[-T:]/).map(Number)
+  const [shownYear, shownMonth] = (await calendar.getAttribute('data-month'))!.split('-').map(Number)
+  const delta = (year! - shownYear!) * 12 + month! - shownMonth!
+  for (let i = 0; i < Math.abs(delta); i++) {
+    await dialog.getByRole('button', { name: delta < 0 ? 'Previous month' : 'Next month', exact: true }).click()
   }
+  const dayLabel = new Intl.DateTimeFormat('en-US', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
+  }).format(new Date(Date.UTC(year!, month! - 1, day!)))
+  await calendar.getByRole('button', { name: dayLabel, exact: true }).click()
+  await dialog.getByRole('textbox', { name: 'Time', exact: true }).fill(value.split('T')[1]!.slice(0, 5))
   await dialog.getByRole('button', { name: 'Done', exact: true }).click()
   await expect(dialog).toHaveCount(0)
 }

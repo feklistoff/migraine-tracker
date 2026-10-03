@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { dateTimeInputValue, resolveCivilDateTime, type CivilTimeOccurrence } from '../../domain/time'
 import type { RecordedTime } from '../../domain/types'
-import { DateTimeWheel, formatPickerTime } from '../../components/DateTimeWheel'
+import { DateTimePicker, formatPickerTime } from '../../components/DateTimePicker'
 
 interface OccurrenceOption {
   occurrence: CivilTimeOccurrence
@@ -107,7 +107,7 @@ export function EventTimeField({
           {formatPickerTime(value)}
         </button>
       </div>
-      {picking ? <DateTimeWheel label={label} value={value} min={min} max={max} onDone={(next) => { onChange(next); setPicking(false) }} onCancel={() => setPicking(false)} /> : null}
+      {picking ? <DateTimePicker label={label} value={value} min={min} max={max} onDone={(next) => { onChange(next); setPicking(false) }} onCancel={() => setPicking(false)} /> : null}
       {hint ? <p className="field-hint">{hint}</p> : null}
       {error ? <p className="form-error" role="alert">{error}</p> : null}
       {occurrenceOptions && occurrenceOptions.length > 0 ? (

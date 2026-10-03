@@ -221,8 +221,8 @@ export function nowEventTime(clock: Clock = systemClock()): RecordedTime {
 }
 
 /**
- * Format an event in its recorded civil context for a native datetime-local
- * control. The control has minute precision; the canonical instant remains
+ * Format an event in its recorded civil context for the date/time editor.
+ * The editor has minute precision; the canonical instant remains
  * unchanged until the user explicitly saves the form.
  */
 export function dateTimeInputValue(value: RecordedTime): string {
