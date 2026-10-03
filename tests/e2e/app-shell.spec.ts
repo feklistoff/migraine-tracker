@@ -7,7 +7,7 @@ test.describe('responsive app shell', () => {
       await page.goto('/')
 
       await expect(page.getByRole('navigation', { name: 'Sections' })).toBeVisible()
-      await expect(page.getByRole('link', { name: 'Start a headache' })).toBeVisible()
+      await expect(page.getByRole('link', { name: 'Log a current headache' })).toBeVisible()
 
       const layout = await page.evaluate(() => ({
         documentWidth: document.documentElement.scrollWidth,
@@ -51,7 +51,7 @@ test.describe('responsive app shell', () => {
       await page.screenshot({ path: testInfo.outputPath('app-shell-dark.png'), fullPage: true })
     }
 
-    await page.getByRole('link', { name: 'Start a headache' }).click()
+    await page.getByRole('link', { name: 'Log a current headache' }).click()
     await expect(page.getByRole('heading', { level: 1, name: 'New headache' })).toBeVisible()
     await expect(page.getByRole('navigation', { name: 'Sections' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Save headache' })).toBeEnabled()

@@ -68,7 +68,7 @@ describe('daily confirmation and day-before notes', () => {
   it('hides day-before notes during an active headache and restores them after ending', async () => {
     await renderDiary()
 
-    fireEvent.click(screen.getByRole('link', { name: 'Start a headache' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Log a current headache' }))
     await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'New headache' })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('link', { name: 'Back to Today' }))
     await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: 'Headache ongoing' })).toBeInTheDocument())

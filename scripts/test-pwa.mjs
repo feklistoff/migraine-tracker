@@ -81,7 +81,7 @@ try {
   console.log('Build A controlled')
   assert.equal(await page.evaluate(() => Boolean(navigator.serviceWorker.controller)), true, 'first build must control the page')
   await expect(page.getByRole('heading', { name: 'Nothing recorded yet.' })).toBeVisible()
-  await page.getByRole('link', { name: 'Start a headache' }).click()
+  await page.getByRole('link', { name: 'Log a current headache' }).click()
   await expect(page.getByRole('heading', { name: 'New headache' })).toBeVisible()
   await page.getByRole('link', { name: 'Back to Today' }).click()
   await expect(page.getByRole('heading', { name: 'Headache ongoing' })).toBeVisible()

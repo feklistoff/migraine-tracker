@@ -2,6 +2,8 @@
 
 A private, phone-local headache diary for one person. The application is designed as an installable iPhone PWA hosted as static files; diary records will live in IndexedDB on the device, with no account, cloud database, telemetry, or reminder service.
 
+When no headache is ongoing, Today always offers **Log a current headache**. A completed headache moves into earlier records on the following day; ongoing headaches continue across midnight. Date/time fields open an in-app scroll-wheel picker with Cancel and Done, using a 24-hour clock inside the wheels and locale-formatted values in the form.
+
 ## Development
 
 Use Node `24.19.0` and pnpm `11.19.0` (the versions are pinned in `.node-version` and `package.json`). The bundled development environment used for this workspace provides those runtimes even when `node` is not on the shell `PATH`.

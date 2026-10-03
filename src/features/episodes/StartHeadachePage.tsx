@@ -7,6 +7,7 @@ import { dateTimeInputValue, nowEventTime, resolveCivilDateTime } from '../../do
 import type { DiaryFacts, Impact, Pain } from '../../domain/types'
 import { EntryShell } from '../../app/AppShell'
 import { routeHref, type AppRoute } from '../../app/Router'
+import { EventTimeField } from './eventTimeInput'
 
 interface StartHeadachePageProps {
   facts: DiaryFacts
@@ -156,16 +157,13 @@ export function StartHeadachePage({ facts, repository, route }: StartHeadachePag
             </div>
             <span className="saved-pill">Saved</span>
           </div>
-          <label className="field-label" htmlFor="start-date-time">
-            Date and time
-            <input
-              id="start-date-time"
-              type="datetime-local"
-              value={startInput}
-              onChange={(event) => setStartInput(event.target.value)}
-              max={dateTimeInputValue(nowEventTime(repository.clock))}
-            />
-          </label>
+          <EventTimeField
+            id="start-date-time"
+            label="Date and time"
+            value={startInput}
+            onChange={setStartInput}
+            max={dateTimeInputValue(nowEventTime(repository.clock))}
+          />
           <p className="field-hint">Began earlier? Set it to when you first noticed the pain.</p>
         </section>
 

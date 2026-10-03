@@ -7,6 +7,7 @@ import { deleteDiaryDatabase } from '../data/db'
 import { DiaryRepository } from '../data/repository'
 import { fixedClock } from '../domain/time'
 import { fixtureEventTime } from '../test/fixtures'
+import { formatPickerTime } from '../components/DateTimeWheel'
 
 const databaseName = 'headache-diary-lifecycle-tests'
 const clock = fixedClock('2024-09-18T14:05:00Z', 'Europe/Helsinki')
@@ -32,7 +33,7 @@ describe('headache lifecycle', () => {
   it('persists the onset before opening an incomplete form with no invented details', async () => {
     const repository = await renderDiary()
 
-    fireEvent.click(screen.getByRole('link', { name: 'Start a headache' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Log a current headache' }))
 
     await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'New headache' })).toBeInTheDocument())
     expect((await repository.read()).episodes).toHaveLength(1)
@@ -51,7 +52,7 @@ describe('headache lifecycle', () => {
   it('saves optional start details into one onset reading and can finish and undo it', async () => {
     const repository = await renderDiary()
 
-    fireEvent.click(screen.getByRole('link', { name: 'Start a headache' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Log a current headache' }))
     await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'New headache' })).toBeInTheDocument())
 
     fireEvent.click(screen.getByRole('button', { name: 'Pain 6 of 10' }))
@@ -69,7 +70,9 @@ describe('headache lifecycle', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     fireEvent.click(screen.getByRole('link', { name: 'Edit start' }))
     await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'New headache' })).toBeInTheDocument())
-    fireEvent.change(screen.getByLabelText('Date and time'), { target: { value: '2024-09-18T16:05' } })
+    fireEvent.click(screen.getByLabelText('Date and time'))
+    fireEvent.keyDown(screen.getByRole('spinbutton', { name: 'Hour' }), { key: 'ArrowUp' })
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save headache' }))
     await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: 'Headache ongoing' })).toBeInTheDocument())
     facts = await repository.read()
@@ -95,7 +98,7 @@ describe('headache lifecycle', () => {
       },
     })
 
-    fireEvent.click(screen.getByRole('link', { name: 'Start a headache' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Log a current headache' }))
     await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'New headache' })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: 'Pain 4 of 10' }))
     failReadingWrite = true
@@ -140,7 +143,7 @@ describe('headache lifecycle', () => {
 
   it('clears an incompatible pain value when the Start pain mode changes', async () => {
     const repository = await renderDiary()
-    fireEvent.click(screen.getByRole('link', { name: 'Start a headache' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Log a current headache' }))
     await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'New headache' })).toBeInTheDocument())
 
     fireEvent.click(screen.getByRole('button', { name: 'Pain 4 of 10' }))
@@ -196,6 +199,6 @@ describe('headache lifecycle', () => {
 
     await waitFor(() => expect(screen.getByText('Still recording this headache?')).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: 'Edit the end time' }))
-    expect(screen.getByLabelText('Date and time')).toHaveValue('2024-09-18T17:05')
+    expect(screen.getByLabelText('Date and time')).toHaveTextContent(formatPickerTime('2024-09-18T17:05'))
   })
 })

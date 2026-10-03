@@ -1,3 +1,4 @@
+import { chooseEventTime } from './helpers/eventTime'
 import { expect, test } from '@playwright/test'
 
 test('History missing days can be reviewed and confirmed from a selected month', async ({ page }) => {
@@ -27,8 +28,8 @@ test('History calendar and selected day refresh after a past headache is added a
   await expect(page.getByText('No entry for this day')).toBeVisible()
   await page.getByRole('link', { name: 'Add a headache', exact: true }).click()
   await expect(page.getByText(/From History:/)).toBeVisible()
-  await page.getByLabel('Started · date and time').fill('2024-09-16T12:00')
-  await page.getByLabel('Ended · date and time').fill('2024-09-16T13:00')
+  await chooseEventTime(page, 'Started · date and time', '2024-09-16T12:00')
+  await chooseEventTime(page, 'Ended · date and time', '2024-09-16T13:00')
   await page.getByRole('button', { name: 'Pain 5 of 10' }).click()
   await page.getByRole('button', { name: 'Save headache' }).click()
   await expect(page.getByRole('heading', { level: 2, name: 'Timeline' })).toBeVisible()

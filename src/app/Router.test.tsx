@@ -62,8 +62,8 @@ describe('app navigation', () => {
     expect(screen.getByRole('navigation', { name: 'Sections' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('link', { name: 'Back to Today' }))
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Start a headache' })).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('link', { name: 'Start a headache' }))
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Log a current headache' })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('link', { name: 'Log a current headache' }))
 
     await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'New headache' })).toBeInTheDocument())
     expect(screen.queryByRole('navigation', { name: 'Sections' })).not.toBeInTheDocument()
