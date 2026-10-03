@@ -345,20 +345,21 @@ export function TodayPage({ route, facts, repository, undoState, onUndoChange }:
   }, [])
 
   const ongoing = useMemo(() => facts.episodes.find((episode) => episode.state === 'ongoing'), [facts.episodes])
-  const latestEnded = useMemo(
-    () =>
-      sortByInstant(
-        facts.episodes.filter((episode) => episode.state !== 'ongoing'),
-        (episode) => episode.end ?? episode.start,
-      ).at(-1),
-    [facts.episodes],
-  )
   const now = repository.clock.now()
   const nowRecorded = nowEventTime(repository.clock)
   const todayDay = civilDay(nowRecorded)
+  const latestEnded = useMemo(
+    () =>
+      sortByInstant(
+        facts.episodes.filter((episode) => episode.state !== 'ongoing' && civilDay(episode.end ?? episode.start) === todayDay),
+        (episode) => episode.end ?? episode.start,
+      ).at(-1),
+    [facts.episodes, todayDay],
+  )
   const todayRecord = dailyRecordForDay(facts, todayDay)
   const visibleFollowUps = useMemo(() => todayFollowUps(facts, nowRecorded), [facts, nowRecorded])
   const primaryEpisode = ongoing ?? latestEnded
+  const undoEpisode = facts.episodes.find((episode) => episode.id === undoState?.episodeId)
   const otherFollowUps = visibleFollowUps.filter((check) => check.dose.episodeId !== primaryEpisode?.id)
   const recentEpisodes = sortByInstant(
     facts.episodes.filter((episode) => episode.id !== primaryEpisode?.id),
@@ -480,11 +481,20 @@ export function TodayPage({ route, facts, repository, undoState, onUndoChange }:
   }
 
   const renderError = error ? <p className="form-error" role="alert">{error}</p> : null
+  const startActions = (
+    <div className="diary-actions" aria-label="Diary actions">
+      <a className="primary-action" href="#start" onClick={(event) => { event.preventDefault(); void handleStart() }} aria-disabled={busy || undefined}>
+        Log a current headache
+      </a>
+      <a className="secondary-action" href={pastEntryHref}>Log a past headache</a>
+    </div>
+  )
 
   return (
     <AppShell route={route}>
       <AppHeader title={title} />
       {renderError}
+      {!ongoing && latestEnded ? startActions : null}
 
       {ongoing ? (
         <section className="headache-card headache-card--ongoing" aria-labelledby="ongoing-heading">
@@ -592,12 +602,6 @@ export function TodayPage({ route, facts, repository, undoState, onUndoChange }:
               />
             ) : null}
           </section>
-          {isUndoStateAvailable(undoState, facts, now.epochMilliseconds) ? (
-            <aside className="undo-bar" aria-label="Undo ended headache">
-              Headache ended at {latestEnded.end ? formatEventTime(latestEnded.end) : 'the recorded time'}
-              <button type="button" onClick={() => void handleUndo()} disabled={busy}>Undo</button>
-            </aside>
-          ) : null}
         </>
       ) : latestEnded?.state === 'end_unknown' ? (
         <section className="headache-card headache-card--unknown" aria-labelledby="unknown-heading">
@@ -632,16 +636,17 @@ export function TodayPage({ route, facts, repository, undoState, onUndoChange }:
       ) : (
         <section className="empty-card" aria-labelledby="empty-card-title">
           <p className="empty-card__mark" aria-hidden="true">·</p>
-          <h2 id="empty-card-title">Nothing recorded yet.</h2>
-          <p>Your diary stays on this iPhone. We’ll keep the details ready for the next step.</p>
-          <div className="diary-actions" aria-label="Diary actions">
-            <a className="primary-action" href="#start" onClick={(event) => { event.preventDefault(); void handleStart() }} aria-disabled={busy || undefined}>
-              Start a headache
-            </a>
-            <a className="secondary-action" href={routeHref({ kind: 'entry', page: 'past', tab: 'today' })}>Log a past headache</a>
-          </div>
+          <h2 id="empty-card-title">{facts.episodes.length ? 'Ready for a new day.' : 'Nothing recorded yet.'}</h2>
+          <p>{facts.episodes.length ? 'Earlier headaches are saved in your diary.' : 'Your diary stays on this iPhone. We’ll keep the details ready for the next step.'}</p>
+          {startActions}
         </section>
       )}
+      {!ongoing && isUndoStateAvailable(undoState, facts, now.epochMilliseconds) ? (
+        <aside className="undo-bar" aria-label="Undo ended headache">
+          Headache ended {undoEpisode?.end ? `${formatEventDate(undoEpisode.end)} at ${formatEventTime(undoEpisode.end)}` : 'at the recorded time'}
+          <button type="button" onClick={() => void handleUndo()} disabled={busy}>Undo</button>
+        </aside>
+      ) : null}
       {!ongoing ? (
         <DailyStatusCard
           facts={facts}

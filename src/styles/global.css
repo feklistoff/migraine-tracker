@@ -52,7 +52,7 @@
 
 body {
   min-width: 320px;
-  min-height: 100vh;
+  min-height: 100svh;
   margin: 0;
   background: var(--color-page);
 }
@@ -138,7 +138,8 @@ h2 {
 .diary-shell {
   width: min(100%, 760px);
   height: 100svh;
-  min-height: 100vh;
+  height: var(--diary-viewport-height, 100dvh);
+  min-height: 0;
   margin: 0 auto;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
@@ -148,6 +149,7 @@ h2 {
 }
 
 .diary-main {
+  min-width: 0;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -166,6 +168,13 @@ h2 {
 
 .diary-content--entry {
   padding-bottom: 16px;
+}
+
+.diary-content > *,
+.form-stack > *,
+.form-card > *,
+.field-label {
+  min-width: 0;
 }
 
 .app-header--diary {
@@ -558,6 +567,7 @@ h2 {
 }
 
 .entry-header h1 {
+  overflow-wrap: anywhere;
   font-size: 1.35rem;
   line-height: 1.15;
   text-align: center;
@@ -573,6 +583,9 @@ h2 {
   flex-direction: column;
   gap: 8px;
   flex-shrink: 0;
+  max-height: 45svh;
+  max-height: calc(var(--diary-viewport-height, 100dvh) * .45);
+  overflow-y: auto;
   padding: 12px 20px max(20px, calc(env(safe-area-inset-bottom) + 12px));
   border-top: 1px solid var(--color-border);
   background: var(--color-page);
@@ -753,11 +766,13 @@ h2 {
 
 .form-stack {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
 }
 
 .form-card,
 .headache-card {
+  overflow-wrap: anywhere;
   padding: 20px;
   border: 1px solid var(--color-border);
   border-radius: 22px;
@@ -824,7 +839,11 @@ h2 {
 }
 
 .field-label input,
-.field-label textarea {
+.field-label select,
+.field-label textarea,
+.date-time-field {
+  min-width: 0;
+  max-width: 100%;
   width: 100%;
   min-height: 46px;
   padding: 10px 12px;
@@ -832,7 +851,80 @@ h2 {
   border-radius: 14px;
   background: var(--color-surface);
   color: var(--color-text);
+  font-size: max(16px, 1rem);
 }
+
+.form-card .pain-selector,
+.form-card .activity-selector {
+  margin-top: 14px;
+}
+
+.date-time-field {
+  min-height: 48px;
+  cursor: pointer;
+  text-align: left;
+  font-weight: 600;
+  white-space: normal;
+}
+
+.date-time-field:focus-visible,
+.date-wheel:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.date-time-dialog {
+  position: fixed;
+  inset: auto 0 0;
+  width: min(100%, 480px);
+  max-width: 100%;
+  max-height: calc(var(--diary-viewport-height, 100dvh) - 16px);
+  margin: 0 auto;
+  padding: 16px 12px max(20px, env(safe-area-inset-bottom));
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 24px 24px 0 0;
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
+.date-time-dialog::backdrop { background: #0006; }
+
+.date-time-dialog-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.date-time-dialog-header h2 { font: inherit; font-weight: 700; text-align: center; overflow-wrap: anywhere; }
+.date-time-dialog-header button { font-size: 16px; min-height: 44px; }
+.date-time-preview { margin: 12px 0 4px; text-align: center; font-size: 16px; font-weight: 600; }
+.date-time-help { margin: 0 0 12px; text-align: center; font-size: 13px; }
+
+.date-time-wheels {
+  display: grid;
+  grid-template-columns: .8fr 1.2fr 1.1fr .8fr .8fr;
+  gap: 4px;
+}
+
+.date-wheel-column { min-width: 0; }
+.date-wheel-label { display: block; margin-bottom: 4px; font-size: 12px; text-align: center; color: var(--color-muted); }
+
+.date-wheel {
+  height: 220px;
+  padding-block: 88px;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  border-radius: 12px;
+  background: linear-gradient(to bottom, transparent 88px, var(--color-sand) 88px, var(--color-sand) 132px, transparent 132px);
+}
+
+.date-wheel::-webkit-scrollbar { display: none; }
+.date-wheel-option { height: 44px; display: grid; place-items: center; scroll-snap-align: center; font-size: 18px; font-weight: 500; color: var(--color-muted); cursor: pointer; }
+.date-wheel-option--selected { color: var(--color-text); font-weight: 700; }
 
 .field-label textarea {
   min-height: 88px;

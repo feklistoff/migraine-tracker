@@ -1,3 +1,4 @@
+import { chooseEventTime } from './helpers/eventTime'
 import { expect, test } from '@playwright/test'
 
 function rgbChannels(value: string): [number, number, number] {
@@ -138,8 +139,8 @@ test.describe('Task 15 accessibility acceptance', () => {
     await expect(page.getByText(medicineName)).toBeVisible()
 
     await page.goto('/#past')
-    await page.getByLabel('Started · date and time').fill('2024-09-16T12:00')
-    await page.getByLabel('Ended · date and time').fill('2024-09-16T13:00')
+    await chooseEventTime(page, 'Started · date and time', '2024-09-16T12:00')
+    await chooseEventTime(page, 'Ended · date and time', '2024-09-16T13:00')
     const note = 'Synthetic long timeline note for responsive wrapping. '.repeat(20).trim()
     await page.getByLabel('Optional note').fill(note)
     await page.getByRole('button', { name: 'Save headache' }).click()

@@ -151,6 +151,23 @@ export function App({ repository = defaultDiaryRepository }: AppProps = {}) {
 
   useEffect(() => subscribeToOtherTabRestores(() => window.location.reload()), [])
   useLayoutEffect(() => applyAppearance(appearance), [appearance])
+  useLayoutEffect(() => {
+    const viewport = window.visualViewport
+    if (!viewport) return
+    const resize = () => {
+      if (viewport.scale === 1) {
+        document.documentElement.style.setProperty('--diary-viewport-height', `${viewport.height}px`)
+      } else {
+        document.documentElement.style.removeProperty('--diary-viewport-height')
+      }
+    }
+    resize()
+    viewport.addEventListener('resize', resize)
+    return () => {
+      viewport.removeEventListener('resize', resize)
+      document.documentElement.style.removeProperty('--diary-viewport-height')
+    }
+  }, [])
   useEffect(() => {
     if (snapshot.facts && undoState && !isUndoStateAvailable(undoState, snapshot.facts, repository.clock.now().epochMilliseconds)) {
       handleUndoChange(undefined)

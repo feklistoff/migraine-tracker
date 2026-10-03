@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 import { dateTimeInputValue, resolveCivilDateTime, type CivilTimeOccurrence } from '../../domain/time'
 import type { RecordedTime } from '../../domain/types'
+import { DateTimeWheel, formatPickerTime } from '../../components/DateTimeWheel'
 
 interface OccurrenceOption {
   occurrence: CivilTimeOccurrence
@@ -97,12 +98,16 @@ export function EventTimeField({
   onChooseOccurrence?: (choice: CivilTimeOccurrence) => void
   hint?: string
 }) {
+  const [picking, setPicking] = useState(false)
   return (
     <>
-      <label className="field-label" htmlFor={id}>
-        {label}
-        <input id={id} type="datetime-local" value={value} min={min} max={max} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
-      </label>
+      <div className="field-label">
+        <span id={`${id}-label`}>{label}</span>
+        <button id={id} className="date-time-field" type="button" aria-labelledby={`${id}-label`} aria-haspopup="dialog" disabled={disabled} onClick={() => setPicking(true)}>
+          {formatPickerTime(value)}
+        </button>
+      </div>
+      {picking ? <DateTimeWheel label={label} value={value} min={min} max={max} onDone={(next) => { onChange(next); setPicking(false) }} onCancel={() => setPicking(false)} /> : null}
       {hint ? <p className="field-hint">{hint}</p> : null}
       {error ? <p className="form-error" role="alert">{error}</p> : null}
       {occurrenceOptions && occurrenceOptions.length > 0 ? (

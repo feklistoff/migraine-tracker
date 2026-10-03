@@ -1,3 +1,4 @@
+import { chooseEventTime } from './helpers/eventTime'
 import { readFileSync } from 'node:fs'
 import { expect, test, type Page, type TestInfo } from '@playwright/test'
 
@@ -46,10 +47,10 @@ async function reviewTheme(page: Page, testInfo: TestInfo, scheme: 'light' | 'da
   await expect(page.getByRole('heading', { level: 2, name: 'Nothing recorded yet.' })).toBeVisible()
   await capture(page, testInfo, scheme === 'light' ? 'Main' : 'Main-dark')
 
-  await page.getByRole('link', { name: 'Start a headache' }).click()
+  await page.getByRole('link', { name: 'Log a current headache' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'New headache' })).toBeVisible()
   await capture(page, testInfo, scheme === 'light' ? 'Start-empty' : 'Start-empty-dark')
-  await page.locator('#start-date-time').fill('2024-09-18T10:00')
+  await chooseEventTime(page, 'Date and time', '2024-09-18T10:00')
   await page.getByRole('button', { name: 'Pain 6 of 10' }).click()
   await page.getByRole('button', { name: 'Slowed down' }).click()
   await page.getByLabel('Optional note').fill('Synthetic onset note for visual review.')
@@ -84,7 +85,7 @@ async function reviewTheme(page: Page, testInfo: TestInfo, scheme: 'light' | 'da
   await page.getByRole('link', { name: 'Log dose' }).click()
   await page.getByLabel('Medicine name').fill('Synthetic medicine')
   await page.getByLabel('Dose', { exact: true }).fill('400 mg')
-  await page.locator('#dose-date-time').fill('2024-09-18T12:00')
+  await chooseEventTime(page, 'Date and time', '2024-09-18T12:00')
   await capture(page, testInfo, scheme === 'light' ? 'Dose' : 'Dose-dark')
   await page.getByRole('button', { name: 'Log dose' }).click()
   await expect(page.getByRole('region', { name: 'overdue follow-up' })).toBeVisible()
@@ -127,8 +128,8 @@ async function reviewTheme(page: Page, testInfo: TestInfo, scheme: 'light' | 'da
   await page.goto('/#today')
   await page.getByRole('link', { name: 'Log another past headache' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Past headache' })).toBeVisible()
-  await page.getByLabel('Started · date and time').fill('2024-09-16T22:30')
-  await page.getByLabel('Ended · date and time').fill('2024-09-16T23:30')
+  await chooseEventTime(page, 'Started · date and time', '2024-09-16T22:30')
+  await chooseEventTime(page, 'Ended · date and time', '2024-09-16T23:30')
   await page.getByRole('button', { name: 'Pain 7 of 10' }).click()
   await page.getByRole('button', { name: 'Had to stop' }).click()
   await page.getByLabel('Optional note').fill('Synthetic past-headache note for visual review.')

@@ -65,7 +65,7 @@ describe('History', () => {
     fireEvent.click(screen.getByRole('link', { name: 'Add a headache' }))
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Past headache' })).toBeInTheDocument())
     expect(screen.getByText(`From History: ${formatCivilDay('2024-09-05')}. Choose the actual start and end times.`)).toBeInTheDocument()
-    expect(screen.getByLabelText('Started · date and time')).toHaveValue('')
+    expect(screen.getByLabelText('Started · date and time')).toHaveTextContent('Choose date and time')
     fireEvent.click(screen.getByRole('link', { name: 'Back to History' }))
     await waitFor(() => expect(screen.getByRole('heading', { name: formatCivilDay('2024-09-05') })).toBeInTheDocument())
   })
