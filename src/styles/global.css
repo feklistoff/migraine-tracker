@@ -428,28 +428,6 @@ h2 {
   border-color: var(--color-accent);
 }
 
-.page-placeholder {
-  margin-top: 2px;
-}
-
-.page-placeholder h2,
-.form-placeholder h2 {
-  font-size: 1.35rem;
-}
-
-.form-placeholder {
-  padding: 22px;
-  border: 1px solid var(--color-border);
-  border-radius: 20px;
-  background: var(--color-surface);
-}
-
-.form-placeholder p {
-  margin: 12px 0 0;
-  color: var(--color-muted);
-  line-height: 1.5;
-}
-
 .checkin-page {
   gap: 22px;
 }
@@ -868,7 +846,7 @@ h2 {
 }
 
 .date-time-field:focus-visible,
-.date-wheel:focus-visible {
+.date-calendar-day:focus-visible {
   outline: 3px solid var(--color-accent);
   outline-offset: 2px;
 }
@@ -900,31 +878,37 @@ h2 {
 .date-time-dialog-header h2 { font: inherit; font-weight: 700; text-align: center; overflow-wrap: anywhere; }
 .date-time-dialog-header button { font-size: 16px; min-height: 44px; }
 .date-time-preview { margin: 12px 0 4px; text-align: center; font-size: 16px; font-weight: 600; }
-.date-time-help { margin: 0 0 12px; text-align: center; font-size: 13px; }
-
-.date-time-wheels {
+.date-calendar-header {
   display: grid;
-  grid-template-columns: .8fr 1.2fr 1.1fr .8fr .8fr;
-  gap: 4px;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 8px;
+  margin-block: 8px;
 }
-
-.date-wheel-column { min-width: 0; }
-.date-wheel-label { display: block; margin-bottom: 4px; font-size: 12px; text-align: center; color: var(--color-muted); }
-
-.date-wheel {
-  height: 220px;
-  padding-block: 88px;
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
-  scroll-snap-type: y mandatory;
-  scrollbar-width: none;
+.date-calendar-header h3 { margin: 0; text-align: center; font-size: 16px; overflow-wrap: anywhere; }
+.date-calendar-header button { min-height: 44px; font-size: 28px; }
+.date-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+.date-calendar-weekday { padding-block: 6px; text-align: center; font-size: 12px; color: var(--color-muted); }
+.date-calendar-day {
+  min-width: 0;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
   border-radius: 12px;
-  background: linear-gradient(to bottom, transparent 88px, var(--color-sand) 88px, var(--color-sand) 132px, transparent 132px);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
 }
-
-.date-wheel::-webkit-scrollbar { display: none; }
-.date-wheel-option { height: 44px; display: grid; place-items: center; scroll-snap-align: center; font-size: 18px; font-weight: 500; color: var(--color-muted); cursor: pointer; }
-.date-wheel-option--selected { color: var(--color-text); font-weight: 700; }
+.date-calendar-day[aria-pressed="true"] { background: var(--color-accent); color: var(--color-surface); font-weight: 700; }
+.date-calendar-day:disabled { opacity: .35; cursor: default; }
+.date-time-input { margin-top: 16px; }
+.date-time-input input { font-variant-numeric: tabular-nums; }
 
 .field-label textarea {
   min-height: 88px;

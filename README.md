@@ -2,7 +2,7 @@
 
 A private, phone-local headache diary for one person. The application is designed as an installable iPhone PWA hosted as static files; diary records will live in IndexedDB on the device, with no account, cloud database, telemetry, or reminder service.
 
-When no headache is ongoing, Today always offers **Log a current headache**. A completed headache moves into earlier records on the following day; ongoing headaches continue across midnight. Date/time fields open an in-app scroll-wheel picker with Cancel and Done, using a 24-hour clock inside the wheels and locale-formatted values in the form.
+When no headache is ongoing, Today always offers **Log a current headache**. A completed headache moves into earlier records on the following day; ongoing headaches continue across midnight. Date/time fields open an in-app calendar for tapping a date and a plain text field for typing 24-hour time (09:30 or 0930), with Cancel and Done. Confirmed values use the device locale in the form.
 
 ## Development
 
@@ -25,7 +25,11 @@ pnpm run build
 
 One GitHub Actions workflow runs TypeScript checks, unit tests, and the build on pushes to `main`, then deploys to GitHub Pages. Manual workflow runs validate without deploying. Pull requests do not trigger this workflow.
 
-Run `pnpm run lint` and `pnpm run test:e2e` locally when relevant to a change. Dependency updates are manual; there are no scheduled Dependabot version-update PRs. Run `pnpm audit --prod` when reviewing dependencies; the audit is not a deployment gate.
+Run `pnpm run lint` and `pnpm run test:e2e` locally when relevant to a change.
+
+Browser suites in `tests/e2e/` are named by behavior: Today, headache lifecycle, date/time input, app shell, History, retrospective entries, Settings, backup/restore and integration. `accessibility.spec.ts` checks motion, focus, contrast, touch targets and wrapping; `visual-review.spec.ts` captures synthetic reference screens in both themes and checks visible control names and header geometry. Those captures support visual review; they do not compare against stored screenshot baselines.
+
+Dependency updates are manual; there are no scheduled Dependabot version-update PRs. Run `pnpm audit --prod` when reviewing dependencies; the audit is not a deployment gate.
 
 ## Installation, offline use and recovery
 
