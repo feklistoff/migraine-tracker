@@ -22,7 +22,7 @@ function contrastRatio(foreground: string, background: string): number {
   return (values[0] + 0.05) / (values[1] + 0.05)
 }
 
-test.describe('Task 15 accessibility acceptance', () => {
+test.describe('accessibility', () => {
   test('respects reduced-motion preferences for animated controls', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.goto('/#settings')
@@ -118,6 +118,9 @@ test.describe('Task 15 accessibility acceptance', () => {
     await page.setViewportSize({ width: 320, height: 844 })
     await page.goto('/#settings')
     await page.addStyleTag({ content: ':root { font-size: 200% !important; }' })
+    await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
+    // Fallback fonts can briefly change the intrinsic width before the local fonts load.
+    await page.evaluate(() => document.fonts.ready)
 
     const widths = await page.evaluate(() => ({
       viewport: document.documentElement.clientWidth,

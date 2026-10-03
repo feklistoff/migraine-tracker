@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 test.describe('headache lifecycle', () => {
-  test('keeps an onset through interruption, reload, finish and Undo', async ({ page }) => {
+  test('keeps an onset through interruption, reload and Undo, then allows another headache after ending', async ({ page }) => {
     await page.goto('/')
     await expect(page.getByRole('heading', { level: 2, name: 'Nothing recorded yet.' })).toBeVisible()
 
@@ -32,6 +32,13 @@ test.describe('headache lifecycle', () => {
 
     await page.getByRole('button', { name: 'Undo' }).click()
     await expect(page.getByRole('heading', { level: 2, name: 'Headache ongoing' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'End headache now' }).click()
+    await expect(page.getByRole('heading', { name: 'Glad it’s over.' })).toBeVisible()
+    await page.getByRole('link', { name: 'Log a current headache', exact: true }).click()
+    await page.getByRole('button', { name: 'Save headache' }).click()
+    await expect(page.getByRole('heading', { name: 'Headache ongoing' })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Earlier headaches' }).getByRole('link')).toHaveCount(1)
   })
 
   test('clears a pending Undo when another diary setting changes', async ({ page }) => {

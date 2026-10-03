@@ -166,7 +166,7 @@ async function reviewTheme(page: Page, testInfo: TestInfo, scheme: 'light' | 'da
   await capture(page, testInfo, scheme === 'light' ? 'Restore-complete' : 'Restore-complete-dark')
 }
 
-test.describe('Task 15 visual and screen reader acceptance', () => {
+test.describe('visual review and accessible names', () => {
   test('captures deterministic synthetic-data reference screens in light mode', async ({ page }, testInfo) => {
     await reviewTheme(page, testInfo, 'light')
   })
